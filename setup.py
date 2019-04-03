@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 setup(
     name='redistimeseries',
-#    version='1.7',
+    version='0.1',
 
     description='RedisTimeSeries Python Client',
     url='https://github.com/RedisTimeSeries/redistimeseries-py',
