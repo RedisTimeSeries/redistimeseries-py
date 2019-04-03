@@ -6,8 +6,8 @@ setup(
     description='RedisTimeSeries Python Client',
     url='https://github.com/RedisTimeSeries/redistimeseries-py',
     packages=find_packages(),
-#    install_requires=['redis', 'PTable'],
-#    check
+    install_requires=['redis'],
+
 #    classifiers=[
 #        'Intended Audience :: Developers',
 #        'License :: OSI Approved :: BSD License',

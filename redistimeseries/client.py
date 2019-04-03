@@ -1,9 +1,12 @@
 import six
 import json
+from enum import Enum
 from redis import Redis,  RedisError, ConnectionPool 
 '''Redis = StrictRedis from redis-py 3.0'''
 from redis.client import Pipeline, parse_info, bool_ok
+from redis.connection import Token
 from redis._compat import (long, nativestr)
+from redis.exceptions import DataError
 #from .path import Path
 
 def parse_range(response):
@@ -25,7 +28,7 @@ class Client(Redis): #changed from StrictRedis
         'ver':  '0.1.0'
     }
 
-    def __init__(self, encoder=None, decoder=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Creates a new RedisTimeSeries client.
         """
@@ -46,4 +49,84 @@ class Client(Redis): #changed from StrictRedis
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)
-            
+
+    AGGREGATIONS = [None, 'avg', 'sum', 'min', 'max', 
+                    'range', 'count', 'first', 'last']
+
+    
+    def tsCreate(self, key, retention=None, *labels):
+        params = [key]
+        if retention is not None:
+            params.append(retention)
+        params.append(labels)
+        return self.execute_command('TS.CREATE', params)
+        
+    def tsAdd(self, key, timestamp, value, retention=None, *labels):
+        params = [key, timestamp, value]
+        if retention is not None:
+            params.append(retention)
+        params.append(labels)
+        return self.execute_command('TS.ADD', params)
+
+    def tsIncreaseBy(self, key, value, reset, retention=None, *labels):  
+        params = [key, value, reset]
+        if retention is not None:
+            params.append(retention)
+        params.append(labels)
+        return self.execute_command('TS.INCRBY', params)
+
+    def tsDecreaseBy(self, key, value, reset, retention=None, *labels):  
+        params = [key, value, reset]
+        if retention is not None:
+            params.append(retention)
+        params.append(labels)
+        return self.execute_command('TS.INCRBY', params)
+        
+    def tsCreateRule(self, sourceKey, destKey, 
+                     aggregationType = None, bucketSizeSeconds = 0):
+        params = [sourceKey, destKey]
+        if aggregationType is not None:        
+            if aggregationType not in self.AGGREGATIONS:
+                raise DataError('Aggregation type is invalid')
+            elif not isinstance(int(bucketSizeSeconds), int):
+                raise DataError('bucketSizeSeconds is invalid')
+            else:
+                params.append(Token.get_token('AGGREGATION'))
+                params.extend([aggregationType, bucketSizeSeconds])
+        return self.execute_command('TS.CREATERULE', params)
+
+    def tsDeleteRule(self, sourceKey, destKey):
+        return self.execute_command('TS.DELETERULE', sourceKey, destKey)
+   
+    def tsRange(self, key, fromTime, toTime, 
+                aggregationType = None, bucketSizeSeconds = 0):
+        params = [key, fromTime, toTime]
+        if aggregationType is not None:        
+            if aggregationType not in self.AGGREGATIONS:
+                raise DataError('Aggregation type is invalid')
+            elif not isinstance(int(bucketSizeSeconds), int):
+                raise DataError('bucketSizeSeconds is invalid')
+            else:
+                params.append(Token.get_token('AGGREGATION'))
+                params.extend([aggregationType, bucketSizeSeconds])
+        return self.execute_command('TS.RANGE', params)
+
+    def tsMultiRange(self, fromTime, toTime, *filters, 
+                     aggregationType = None, bucketSizeSeconds = 0):
+        params = [fromTime, toTime]
+        if aggregationType is not None:        
+            if aggregationType not in self.AGGREGATIONS:
+                raise DataError('Aggregation type is invalid')
+            elif not isinstance(int(bucketSizeSeconds), int):
+                raise DataError('bucketSizeSeconds is invalid')
+            else:
+                params.append(Token.get_token('AGGREGATION'))
+                params.extend([aggregationType, bucketSizeSeconds])
+        params.append(*filters)
+        return self.execute_command('TS.MRANGE', params)
+
+    def tsGet(self, key):
+        return self.execute_command('TS.GET', key)
+
+    def tsInfo(self, key):
+        return self.execute_command('TS.INFO', key)
