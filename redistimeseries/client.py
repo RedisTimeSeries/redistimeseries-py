@@ -1,4 +1,4 @@
-#import six
+import six
 from redis import Redis,  RedisError 
 '''Redis = StrictRedis from redis-py 3.0'''
 from redis.client import Pipeline, parse_info, bool_ok
@@ -8,10 +8,10 @@ from redis.exceptions import DataError
 #from .path import Path
 
 def parse_range(response):
-    pass
+    return response
 
 def parse_m_range(response):
-    pass
+    return response
 
 class Client(Redis): #changed from StrictRedis
     """
@@ -34,7 +34,7 @@ class Client(Redis): #changed from StrictRedis
             
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
-            'TS.CREATE' : bool_ok,
+            'TS.CREATE' : lambda r: r and nativestr(r),
             'TS.ADD': bool_ok,
             'TS.INCRBY': bool_ok,
             'TS.DECRBY': bool_ok,
@@ -43,7 +43,7 @@ class Client(Redis): #changed from StrictRedis
             'TS.RANGE': parse_range,
             'TS.MRANGE': parse_m_range,
             #'TS.GET': , response is enough
-            'TS.INFO': parse_info, # TODO
+            #'TS.INFO': parse_info, # TODO
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)
@@ -51,96 +51,86 @@ class Client(Redis): #changed from StrictRedis
     AGGREGATIONS = [None, 'avg', 'sum', 'min', 'max', 
                     'range', 'count', 'first', 'last']
 
-    #Another idea
-    class cls_AGGREGATIONS:
-        NONE = None
-        AVG = 'avg'
-        SUM = 'sum'
-        MIN = 'min'
-        MAX = 'max'
-        RANGE = 'range'
-        COUNT = 'count'
-        FIRST = 'first'
-        LAST = 'last'
-    
-    def tsCreate(self, key, retention=None, *labels):
+    @staticmethod
+    def appendRetention(params, retention):
+        if retention is not None:
+            params.extend(['RETENTION', retention])
+
+    @staticmethod
+    def appendLabels(params, **labels):
+        if labels:
+            params.append('LABELS')
+            [params.extend([k,v]) for k,v in labels.items()]
+
+    def appendAggregation(self, params, aggregationType, bucketSizeSeconds):
+        if aggregationType not in self.AGGREGATIONS:
+            raise DataError('Aggregation type is invalid')
+        else:
+            params.append('AGGREGATION')
+            params.extend([aggregationType, bucketSizeSeconds])
+
+    def tsCreate(self, key, retention=None, labels={}):
         '''Create a new time-series'''
         params = [key]
-        if retention is not None:
-            params.append(retention)
-        if labels:
-            params.append(labels)
-        return self.execute_command('TS.CREATE', params)
+        self.appendRetention(params, retention)
+        self.appendLabels(params, **labels)
+
+        return self.execute_command('TS.CREATE', *params)
         
-    def tsAdd(self, key, timestamp, value, retention=None, *labels):
+    def tsAdd(self, key, timestamp, value, retention=None, labels={}):
         '''Append (or create and append) a new value to the series'''
         params = [key, timestamp, value]
-        if retention is not None:
-            params.append(retention)
-        params.append(labels)
-        return self.execute_command('TS.ADD', params)
+        self.appendRetention(params, retention)
+        self.appendLabels(params, **labels)
 
-    def tsIncreaseBy(self, key, value, reset, retention=None, *labels): 
+        return self.execute_command('TS.ADD', *params)
+
+    def tsIncreaseBy(self, key, value, reset, retention=None, labels={}): 
         '''Increment the latest value'''
         params = [key, value, reset]
-        if retention is not None:
-            params.append(retention)
-        params.append(labels)
-        return self.execute_command('TS.INCRBY', params)
+        self.appendRetention(params, retention)
+        self.appendLabels(params, **labels)
 
-    def tsDecreaseBy(self, key, value, reset, retention=None, *labels):  
+        return self.execute_command('TS.INCRBY', *params)
+
+    def tsDecreaseBy(self, key, value, reset, retention=None, labels={}):  
         '''Decrease the latest value'''
         params = [key, value, reset]
-        if retention is not None:
-            params.append(retention)
-        params.append(labels)
-        return self.execute_command('TS.INCRBY', params)
+        self.appendRetention(params, retention)
+        self.appendLabels(params, **labels)
+        
+        return self.execute_command('TS.INCRBY', *params)
 
     def tsCreateRule(self, sourceKey, destKey, 
                      aggregationType, bucketSizeSeconds):
         '''Create a compaction rule'''
-        params = [sourceKey, destKey]
-        if aggregationType not in self.AGGREGATIONS:
-            raise DataError('Aggregation type is invalid')
-        elif not isinstance(int(bucketSizeSeconds), int):
-            raise DataError('bucketSizeSeconds is invalid')
-        else:
-            params.append(Token.get_token('AGGREGATION'))
-            params.extend([aggregationType, bucketSizeSeconds])
-        return self.execute_command('TS.CREATERULE', params)
+        params=[sourceKey, destKey]
+        self.appendAggregation(params, aggregationType, bucketSizeSeconds)
+
+        return self.execute_command('TS.CREATERULE', *params)
 
     def tsDeleteRule(self, sourceKey, destKey):
         '''Delete a compaction rule'''
         return self.execute_command('TS.DELETERULE', sourceKey, destKey)
    
     def tsRange(self, key, fromTime, toTime, 
-                aggregationType = None, bucketSizeSeconds = 0):
+                aggregationType=None, bucketSizeSeconds=0):
         '''Query a range'''
         params = [key, fromTime, toTime]
-        if aggregationType is not None:        
-            if aggregationType not in self.AGGREGATIONS:
-                raise DataError('Aggregation type is invalid')
-            elif not isinstance(int(bucketSizeSeconds), int):
-                raise DataError('bucketSizeSeconds is invalid')
-            else:
-                params.append(Token.get_token('AGGREGATION'))
-                params.extend([aggregationType, bucketSizeSeconds])
-        return self.execute_command('TS.RANGE', params)
+        if aggregationType != None:
+            self.appendAggregation(params, aggregationType, bucketSizeSeconds)
 
-    def tsMultiRange(self, fromTime, toTime, *filters, 
-                     aggregationType = None, bucketSizeSeconds = 0):
+        return self.execute_command('TS.RANGE', *params)
+
+    def tsMultiRange(self, fromTime, toTime, 
+                     aggregationType=None, bucketSizeSeconds=0, filters=[]):
         '''Query a range by filters'''
         params = [fromTime, toTime]
-        if aggregationType is not None:        
-            if aggregationType not in self.AGGREGATIONS:
-                raise DataError('Aggregation type is invalid')
-            elif not isinstance(int(bucketSizeSeconds), int):
-                raise DataError('bucketSizeSeconds is invalid')
-            else:
-                params.append(Token.get_token('AGGREGATION'))
-                params.extend([aggregationType, bucketSizeSeconds])
-        params.append(*filters)
-        return self.execute_command('TS.MRANGE', params)
+        if aggregationType != None:
+            self.appendAggregation(params, aggregationType, bucketSizeSeconds)
+        if filters:
+            params.extend(['FILTER', *filters])
+        return self.execute_command('TS.MRANGE', *params)
 
     def tsGet(self, key):
         '''Get the last sample'''
@@ -149,6 +139,3 @@ class Client(Redis): #changed from StrictRedis
     def tsInfo(self, key):
         '''Get the last sample'''
         return self.execute_command('TS.INFO', key)
-
-client = Client()
-client.tsCreate(1)
