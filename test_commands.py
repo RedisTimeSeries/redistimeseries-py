@@ -3,7 +3,7 @@ from unittest import TestCase
 from redistimeseries.client import Client as RedisTimeSeries
 from redis import ResponseError
 
-rj = None
+rts = None
 port = 6379
 
 class RedisTimeSeriesTest(TestCase):
@@ -15,18 +15,18 @@ class RedisTimeSeriesTest(TestCase):
     def testCreate(self):
         'Test different TS.CREATE calls'
         self.assertTrue(rts.tsCreate(1))
-        self.assertTrue(rts.tsCreate(2, retention=5))
+        self.assertTrue(rts.tsCreate(2, retentionSecs=5))
         self.assertTrue(rts.tsCreate(3, labels={'Redis':'Labs'}))
-        self.assertTrue(rts.tsCreate(4, retention=20, labels={'Time':'Series'}))
+        self.assertTrue(rts.tsCreate(4, retentionSecs=20, labels={'Time':'Series'}))
         info = rts.tsInfo(4)
         self.assertEqual(20, info[3])
         self.assertEqual(b'Time', info[9][0][0])
         
     def testAdd(self):
         self.assertTrue(rts.tsAdd(1, 1, 1))
-        self.assertTrue(rts.tsAdd(2, 2, 3, retention=10))
+        self.assertTrue(rts.tsAdd(2, 2, 3, retentionSecs=10))
         self.assertTrue(rts.tsAdd(3, 3, 2, labels={'Redis':'Labs'}))
-        self.assertTrue(rts.tsAdd(5, 4, 2, retention=10, labels={'Redis':'Labs'}))
+        self.assertTrue(rts.tsAdd(5, 4, 2, retentionSecs=10, labels={'Redis':'Labs'}))
         self.assertTrue(rts.tsAdd(4, '*', 1))
         info = rts.tsInfo(5)
         self.assertEqual(10, info[3])
