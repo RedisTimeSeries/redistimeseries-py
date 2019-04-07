@@ -13,6 +13,12 @@ def parse_range(response):
 def parse_m_range(response):
     return response
 
+def parse_to_dict(response):
+    return dict(zip(map(nativestr, response[::2]), response[1::2]))
+#    res = dict([(k.decode(), v) for k,v in zip(response[0::2], response[1::2])])
+#    if res['labels']:
+#        res['labels'] = dict([(k.decode(), v.decode()) for k,v in zip(response[0::2], response[1::2])])
+
 class Client(Redis): #changed from StrictRedis
     """
     This class subclasses redis-py's `Redis` and implements 
@@ -42,8 +48,8 @@ class Client(Redis): #changed from StrictRedis
             'TS.DELETERULE':bool_ok,
             'TS.RANGE': parse_range,
             'TS.MRANGE': parse_m_range,
-            #'TS.GET': , response is enough
-            #'TS.INFO': parse_info, # TODO
+            'TS.GET': lambda x: (int(x[0]), float(x[1])),
+            'TS.INFO': parse_to_dict, # TODO
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)
@@ -127,13 +133,13 @@ class Client(Redis): #changed from StrictRedis
         self.appendRetention(params, retentionSecs)
         self.appendLabels(params, **labels)
         
-        return self.execute_command('TS.INCRBY', *params)
+        return self.execute_command('TS.DECRBY', *params)
 
     def tsCreateRule(self, sourceKey, destKey, 
                      aggregationType, bucketSizeSeconds):
         """
         Creates a compaction rule from values added to ``sourceKey`` 
-        into ``destKey``. Aggregating for bucketSizeSeconds where an
+        into ``destKey``. Aggregating for ``bucketSizeSeconds`` where an
         ``aggregationType`` can be ['avg', 'sum', 'min', 'max',
         'range', 'count', 'first', 'last']
         """
@@ -150,7 +156,7 @@ class Client(Redis): #changed from StrictRedis
                 aggregationType=None, bucketSizeSeconds=0):
         """
         Query a range from ``key``, from ``fromTime`` to ``toTime``.
-        Can Aggregate for bucketSizeSeconds where an ``aggregationType``
+        Can Aggregate for ``bucketSizeSeconds`` where an ``aggregationType``
         can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
         'last']
         """
@@ -165,7 +171,8 @@ class Client(Redis): #changed from StrictRedis
                      aggregationType=None, bucketSizeSeconds=0):
         """
         Query a range based on filters,retentionSecs from ``fromTime`` to ``toTime``.
-        Can Aggregate for bucketSizeSeconds where an ``aggregationType``
+        ``filters`` are a list strings such as ['Test=This'].
+        Can Aggregate for ``bucketSizeSeconds`` where an ``aggregationType``
         can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
         'last']
         """
