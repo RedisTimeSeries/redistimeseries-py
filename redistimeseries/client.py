@@ -1,6 +1,6 @@
 import six
 import redis
-from redis import Redis,  RedisError 
+from redis import Redis, RedisError 
 '''Redis = StrictRedis from redis-py 3.0'''
 from redis.client import Pipeline, parse_info, bool_ok
 from redis.connection import Token
@@ -14,16 +14,17 @@ def parse_m_range(response):
     return response
 
 def parse_to_dict(response):
-    return dict(zip(map(nativestr, response[::2]), response[1::2]))
-#    res = dict([(k.decode(), v) for k,v in zip(response[0::2], response[1::2])])
-#    if res['labels']:
-#        res['labels'] = dict([(k.decode(), v.decode()) for k,v in zip(response[0::2], response[1::2])])
+    #return { response[i] : response[i + 1] for i in range(0, len(response), 2) } TODO
+    parse = lambda x : [{nativestr(x[i][0]):nativestr(x[i][1])} for i in range(len(x))]
+    res = dict(zip(map(nativestr, response[::2]), response[1::2]))
+    res['labels'] = parse(res['labels'])
+    return res
 
 class Client(Redis): #changed from StrictRedis
     """
     This class subclasses redis-py's `Redis` and implements 
     RedisTimeSeries's commmands (prefixed with "ts").
-    The client allows to interact with RedisTimeSeriRedisTimeSerieses and use all of
+    The client allows to interact with RedisTimeSeries and use all of
     it's functionality.
     """
 
@@ -167,7 +168,7 @@ class Client(Redis): #changed from StrictRedis
         return self.execute_command('TS.RANGE', *params)
 
 #TODO - filters shouldn't have default
-    def tsMultiRange(self, fromTime, toTime, filters=[],
+    def tsMultiRange(self, fromTime, toTime, filters,
                      aggregationType=None, bucketSizeSeconds=0):
         """
         Query a range based on filters,retentionSecs from ``fromTime`` to ``toTime``.

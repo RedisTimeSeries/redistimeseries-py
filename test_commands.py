@@ -3,7 +3,6 @@ import unittest
 from time import sleep
 from unittest import TestCase
 from redistimeseries.client import Client as RedisTimeSeries
-from redis import ResponseError
 
 rts = None
 port = 6379
@@ -23,19 +22,21 @@ class RedisTimeSeriesTest(TestCase):
         self.assertTrue(rts.tsCreate(4, retentionSecs=20, labels={'Time':'Series'}))
         info = rts.tsInfo(4)
         self.assertEqual(20, info['retentionSecs'])
-        self.assertEqual(b'Time', info['labels'][0][0])
+        self.assertEqual('Series', info['labels'][0]['Time'])
         
+        a = [1,2,3]
+        a.pop
     def testAdd(self):
         '''Test TS.ADD calls'''
 
         self.assertTrue(rts.tsAdd(1, 1, 1))
         self.assertTrue(rts.tsAdd(2, 2, 3, retentionSecs=10))
         self.assertTrue(rts.tsAdd(3, 3, 2, labels={'Redis':'Labs'}))
-        self.assertTrue(rts.tsAdd(5, 4, 2, retentionSecs=10, labels={'Redis':'Labs'}))
+        self.assertTrue(rts.tsAdd(5, 4, 2, retentionSecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
         self.assertTrue(rts.tsAdd(4, '*', 1))
         info = rts.tsInfo(5)
         self.assertEqual(10, info['retentionSecs'])
-        self.assertEqual(b'Redis', info['labels'][0][0])
+        self.assertEqual('Labs', info['labels'][0]['Redis'])
 
     def testIncrbyDecrby(self):
         '''Test TS.INCRBY and TS.DECRBY calls'''
@@ -79,6 +80,7 @@ class RedisTimeSeriesTest(TestCase):
 
     def testRange(self):
         '''Test TS.RANGE calls which returns range by key'''
+
         for i in range(100):
             rts.tsAdd(1, i, i % 7)
         self.assertTrue(100, len(rts.tsRange(1, 0, 200)))
@@ -99,17 +101,20 @@ class RedisTimeSeriesTest(TestCase):
                         aggregationType='avg', bucketSizeSeconds=10)))
 
     def testGet(self):
+        '''Test TS.GET calls'''
+
         rts.tsAdd(1, 2, 3)
         self.assertEqual(2, rts.tsGet(1)[0])
         rts.tsAdd(1, 3, 4)
         self.assertEqual(4, rts.tsGet(1)[1])    
 
     def testInfo(self):
-        rts.tsCreate(1, retentionSecs=5, labels={'label' : 'data'})
+        '''Test TS.INFO calls'''
+
+        rts.tsCreate(1, retentionSecs=5, labels={'currentLabel' : 'currentData'})
         info = rts.tsInfo(1)
         self.assertTrue(info['retentionSecs'] == 5)
-        self.assertTrue(info['labels'][0][0].decode() == 'label')
-        self.assertTrue(info['labels'][0][1].decode() == 'data')
+        self.assertEqual(info['labels'][0]['currentLabel'], 'currentData')
 
 
 if __name__ == '__main__':
