@@ -1,24 +1,44 @@
 import six
 import redis
 from redis import Redis, RedisError 
-'''Redis = StrictRedis from redis-py 3.0'''
-from redis.client import Pipeline, parse_info, bool_ok
-from redis.connection import Token
+from redis.client import bool_ok
 from redis._compat import (long, nativestr)
 from redis.exceptions import DataError
 
+class TSInfo(object):
+    chunkCount = None
+    labels = []
+    lastTimeStamp = None
+    maxSamplesPerChunk = None
+    retentionSecs = None
+    rules = []
+
+    def __init__(self, args):
+        self.chunkCount = args['chunkCount']
+        self.labels = list_to_dict(args['labels'])
+        self.lastTimeStamp = args['lastTimestamp']
+        self.maxSamplesPerChunk = args['maxSamplesPerChunk']
+        self.retentionSecs = args['retentionSecs']
+        self.rules = args['rules']
+
+def list_to_dict(aList):
+    return {nativestr(aList[i][0]):nativestr(aList[i][1])
+                for i in range(len(aList))}
+
 def parse_range(response):
-    return response
+    return [tuple((l[0], l[1].decode())) for l in response]
 
 def parse_m_range(response):
-    return response
-
-def parse_to_dict(response):
-    #return { response[i] : response[i + 1] for i in range(0, len(response), 2) } TODO
-    parse = lambda x : [{nativestr(x[i][0]):nativestr(x[i][1])} for i in range(len(x))]
-    res = dict(zip(map(nativestr, response[::2]), response[1::2]))
-    res['labels'] = parse(res['labels'])
+    res = []
+    for item in response:
+        res.append({ nativestr(item[0]) : [list_to_dict(item[1]), 
+                                parse_range(item[2])]})
     return res
+
+def parse_info(response):
+    res = dict(zip(map(nativestr, response[::2]), response[1::2]))
+    info = TSInfo(res)
+    return info   
 
 class Client(Redis): #changed from StrictRedis
     """
@@ -33,6 +53,17 @@ class Client(Redis): #changed from StrictRedis
         'ver':  '0.1.0'
     }
 
+    CREATE_CMD = 'TS.CREATE'
+    ADD_CMD = 'TS.ADD'
+    INCRBY_CMD = 'TS.INCRBY'
+    DECRBY_CMD = 'TS.DECRBY'
+    CREATERULE_CMD = 'TS.CREATERULE'
+    DELETERULE_CMD = 'TS.DELETERULE'
+    RANGE_CMD = 'TS.RANGE'
+    MRANGE_CMD = 'TS.MRANGE'
+    GET_CMD = 'TS.GET'
+    INFO_CMD = 'TS.INFO'
+
     def __init__(self, *args, **kwargs):
         """
         Creates a new RedisTimeSeries client.
@@ -41,16 +72,16 @@ class Client(Redis): #changed from StrictRedis
             
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
-            'TS.CREATE' : lambda r: r and nativestr(r),
-            'TS.ADD': bool_ok,
-            'TS.INCRBY': bool_ok,
-            'TS.DECRBY': bool_ok,
-            'TS.CREATERULE': bool_ok,
-            'TS.DELETERULE':bool_ok,
-            'TS.RANGE': parse_range,
-            'TS.MRANGE': parse_m_range,
-            'TS.GET': lambda x: (int(x[0]), float(x[1])),
-            'TS.INFO': parse_to_dict, # TODO
+            self.CREATE_CMD : lambda r: r and nativestr(r),
+            self.ADD_CMD : bool_ok,
+            self.INCRBY_CMD : bool_ok,
+            self.DECRBY_CMD : bool_ok,
+            self.CREATERULE_CMD : bool_ok,
+            self.DELETERULE_CMD : bool_ok,
+            self.RANGE_CMD : parse_range,
+            self.MRANGE_CMD : parse_m_range,
+            self.GET_CMD : lambda x: (int(x[0]), float(x[1])),
+            self.INFO_CMD : parse_info,
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)
@@ -69,14 +100,16 @@ class Client(Redis): #changed from StrictRedis
             params.extend(['RESET', timeBucket])
 
     @staticmethod
-    def appendLabels(params, **labels):
+    def appendLabels(params, labels):
         if labels:
             params.append('LABELS')
-            [params.extend([k,v]) for k,v in labels.items()]
+            for k, v in labels.items():
+                params.extend([k,v])
 
-    def appendAggregation(self, params, aggregationType, 
-                          bucketSizeSeconds):
-        if aggregationType not in self.AGGREGATIONS:
+    @staticmethod
+    def appendAggregation(params, aggregationType, 
+                          bucketSizeSeconds):     
+        if aggregationType not in Client.AGGREGATIONS:
             raise DataError('Aggregation type is invalid')
         else:
             params.append('AGGREGATION')
@@ -89,9 +122,9 @@ class Client(Redis): #changed from StrictRedis
         """
         params = [key]
         self.appendRetention(params, retentionSecs)
-        self.appendLabels(params, **labels)
+        self.appendLabels(params, labels)
 
-        return self.execute_command('TS.CREATE', *params)
+        return self.execute_command(self.CREATE_CMD, *params)
         
     def tsAdd(self, key, timestamp, value, 
               retentionSecs=None, labels={}):
@@ -102,9 +135,9 @@ class Client(Redis): #changed from StrictRedis
         """
         params = [key, timestamp, value]
         self.appendRetention(params, retentionSecs)
-        self.appendLabels(params, **labels)
+        self.appendLabels(params, labels)
 
-        return self.execute_command('TS.ADD', *params)
+        return self.execute_command(self.ADD_CMD, *params)
 
     def tsIncreaseBy(self, key, value, timeBucket=None,
                      retentionSecs=None, labels={}): 
@@ -117,9 +150,9 @@ class Client(Redis): #changed from StrictRedis
         params = [key, value]
         self.appendTimeBucket(params, timeBucket)
         self.appendRetention(params, retentionSecs)
-        self.appendLabels(params, **labels)
+        self.appendLabels(params, labels)
 
-        return self.execute_command('TS.INCRBY', *params)
+        return self.execute_command(self.INCRBY_CMD, *params)
 
     def tsDecreaseBy(self, key, value, timeBucket=None,
                      retentionSecs=None, labels={}):  
@@ -132,9 +165,9 @@ class Client(Redis): #changed from StrictRedis
         params = [key, value]
         self.appendTimeBucket(params, timeBucket)
         self.appendRetention(params, retentionSecs)
-        self.appendLabels(params, **labels)
+        self.appendLabels(params, labels)
         
-        return self.execute_command('TS.DECRBY', *params)
+        return self.execute_command(self.DECRBY_CMD, *params)
 
     def tsCreateRule(self, sourceKey, destKey, 
                      aggregationType, bucketSizeSeconds):
@@ -147,11 +180,11 @@ class Client(Redis): #changed from StrictRedis
         params=[sourceKey, destKey]
         self.appendAggregation(params, aggregationType, bucketSizeSeconds)
 
-        return self.execute_command('TS.CREATERULE', *params)
+        return self.execute_command(self.CREATERULE_CMD, *params)
 
     def tsDeleteRule(self, sourceKey, destKey):
         """Deletes a compaction rule"""
-        return self.execute_command('TS.DELETERULE', sourceKey, destKey)
+        return self.execute_command(self.DELETERULE_CMD, sourceKey, destKey)
    
     def tsRange(self, key, fromTime, toTime, 
                 aggregationType=None, bucketSizeSeconds=0):
@@ -165,9 +198,8 @@ class Client(Redis): #changed from StrictRedis
         if aggregationType != None:
             self.appendAggregation(params, aggregationType, bucketSizeSeconds)
 
-        return self.execute_command('TS.RANGE', *params)
+        return self.execute_command(self.RANGE_CMD, *params)
 
-#TODO - filters shouldn't have default
     def tsMultiRange(self, fromTime, toTime, filters,
                      aggregationType=None, bucketSizeSeconds=0):
         """
@@ -181,12 +213,12 @@ class Client(Redis): #changed from StrictRedis
         if aggregationType != None:
             self.appendAggregation(params, aggregationType, bucketSizeSeconds)
         params.extend(['FILTER', *filters])
-        return self.execute_command('TS.MRANGE', *params)
+        return self.execute_command(self.MRANGE_CMD, *params)
 
     def tsGet(self, key):
         """Gets the last sample of ``key``"""
-        return self.execute_command('TS.GET', key)
+        return self.execute_command(self.GET_CMD, key)
 
     def tsInfo(self, key):
         """Gets information of ``key``"""
-        return self.execute_command('TS.INFO', key)
+        return self.execute_command(self.INFO_CMD, key)

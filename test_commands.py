@@ -21,11 +21,9 @@ class RedisTimeSeriesTest(TestCase):
         self.assertTrue(rts.tsCreate(3, labels={'Redis':'Labs'}))
         self.assertTrue(rts.tsCreate(4, retentionSecs=20, labels={'Time':'Series'}))
         info = rts.tsInfo(4)
-        self.assertEqual(20, info['retentionSecs'])
-        self.assertEqual('Series', info['labels'][0]['Time'])
-        
-        a = [1,2,3]
-        a.pop
+        self.assertEqual(20, info.retentionSecs)
+        self.assertEqual('Series', info.labels['Time'])
+
     def testAdd(self):
         '''Test TS.ADD calls'''
 
@@ -35,8 +33,8 @@ class RedisTimeSeriesTest(TestCase):
         self.assertTrue(rts.tsAdd(5, 4, 2, retentionSecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
         self.assertTrue(rts.tsAdd(4, '*', 1))
         info = rts.tsInfo(5)
-        self.assertEqual(10, info['retentionSecs'])
-        self.assertEqual('Labs', info['labels'][0]['Redis'])
+        self.assertEqual(10, info.retentionSecs)
+        self.assertEqual('Labs', info.labels['Redis'])
 
     def testIncrbyDecrby(self):
         '''Test TS.INCRBY and TS.DECRBY calls'''
@@ -71,12 +69,12 @@ class RedisTimeSeriesTest(TestCase):
             rts.tsAdd(1, '*', 2)
         self.assertEqual(rts.tsGet(2)[1], 1.5)
         info = rts.tsInfo(1)
-        self.assertEqual(info['rules'][0][1], 1)
+        self.assertEqual(info.rules[0][1], 1)
 
         # test rule deletion
         rts.tsDeleteRule(1, 2)
         info = rts.tsInfo(1)
-        self.assertFalse(info['rules'])
+        self.assertFalse(info.rules)
 
     def testRange(self):
         '''Test TS.RANGE calls which returns range by key'''
@@ -92,8 +90,11 @@ class RedisTimeSeriesTest(TestCase):
     def testMultiRange(self):
         '''Test TS.MRANGE calls which returns range by filter'''
 
+        rts.tsCreate(1, labels={'Test':'This'})
+        rts.tsCreate(2, labels={'Test':'This', 'Toste':'That'})
         for i in range(100):
-            rts.tsAdd(1, i, i % 7, labels={'Test':'This'})
+            rts.tsAdd(1, i, i % 7)
+            rts.tsAdd(2, i, i % 11)
         self.assertTrue(100, len(rts.tsMultiRange(0, 200, filters=['Test=This'])))
         for i in range(100):
             rts.tsAdd(1, i+200, i % 7)
@@ -113,8 +114,8 @@ class RedisTimeSeriesTest(TestCase):
 
         rts.tsCreate(1, retentionSecs=5, labels={'currentLabel' : 'currentData'})
         info = rts.tsInfo(1)
-        self.assertTrue(info['retentionSecs'] == 5)
-        self.assertEqual(info['labels'][0]['currentLabel'], 'currentData')
+        self.assertTrue(info.retentionSecs == 5)
+        self.assertEqual(info.labels['currentLabel'], 'currentData')
 
 
 if __name__ == '__main__':
