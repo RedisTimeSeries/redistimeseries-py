@@ -72,7 +72,7 @@ class Client(Redis): #changed from StrictRedis
             
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
-            self.CREATE_CMD : lambda r: r and nativestr(r),
+            self.CREATE_CMD : bool_ok,
             self.ADD_CMD : bool_ok,
             self.INCRBY_CMD : bool_ok,
             self.DECRBY_CMD : bool_ok,
@@ -115,7 +115,7 @@ class Client(Redis): #changed from StrictRedis
             params.append('AGGREGATION')
             params.extend([aggregationType, bucketSizeSeconds])
 
-    def tsCreate(self, key, retentionSecs=None, labels={}):
+    def create(self, key, retentionSecs=None, labels={}):
         """
         Creates a new time-series ``key`` with ``rententionSecs`` in 
         seconds and ``labels``.
@@ -126,7 +126,7 @@ class Client(Redis): #changed from StrictRedis
 
         return self.execute_command(self.CREATE_CMD, *params)
         
-    def tsAdd(self, key, timestamp, value, 
+    def add(self, key, timestamp, value, 
               retentionSecs=None, labels={}):
         """
         Appends (or creates and appends) a new ``value`` to series 
@@ -139,7 +139,7 @@ class Client(Redis): #changed from StrictRedis
 
         return self.execute_command(self.ADD_CMD, *params)
 
-    def tsIncreaseBy(self, key, value, timeBucket=None,
+    def incrby(self, key, value, timeBucket=None,
                      retentionSecs=None, labels={}): 
         """
         Increces latest value in ``key`` by ``value``.
@@ -154,7 +154,7 @@ class Client(Redis): #changed from StrictRedis
 
         return self.execute_command(self.INCRBY_CMD, *params)
 
-    def tsDecreaseBy(self, key, value, timeBucket=None,
+    def decrby(self, key, value, timeBucket=None,
                      retentionSecs=None, labels={}):  
         """
         Decreases latest value in ``key`` by ``value``.
@@ -169,7 +169,7 @@ class Client(Redis): #changed from StrictRedis
         
         return self.execute_command(self.DECRBY_CMD, *params)
 
-    def tsCreateRule(self, sourceKey, destKey, 
+    def createrule(self, sourceKey, destKey, 
                      aggregationType, bucketSizeSeconds):
         """
         Creates a compaction rule from values added to ``sourceKey`` 
@@ -182,11 +182,11 @@ class Client(Redis): #changed from StrictRedis
 
         return self.execute_command(self.CREATERULE_CMD, *params)
 
-    def tsDeleteRule(self, sourceKey, destKey):
+    def deleterule(self, sourceKey, destKey):
         """Deletes a compaction rule"""
         return self.execute_command(self.DELETERULE_CMD, sourceKey, destKey)
    
-    def tsRange(self, key, fromTime, toTime, 
+    def range(self, key, fromTime, toTime, 
                 aggregationType=None, bucketSizeSeconds=0):
         """
         Query a range from ``key``, from ``fromTime`` to ``toTime``.
@@ -200,7 +200,7 @@ class Client(Redis): #changed from StrictRedis
 
         return self.execute_command(self.RANGE_CMD, *params)
 
-    def tsMultiRange(self, fromTime, toTime, filters,
+    def mrange(self, fromTime, toTime, filters,
                      aggregationType=None, bucketSizeSeconds=0):
         """
         Query a range based on filters,retentionSecs from ``fromTime`` to ``toTime``.
@@ -215,10 +215,10 @@ class Client(Redis): #changed from StrictRedis
         params.extend(['FILTER', *filters])
         return self.execute_command(self.MRANGE_CMD, *params)
 
-    def tsGet(self, key):
+    def get(self, key):
         """Gets the last sample of ``key``"""
         return self.execute_command(self.GET_CMD, key)
 
-    def tsInfo(self, key):
+    def info(self, key):
         """Gets information of ``key``"""
         return self.execute_command(self.INFO_CMD, key)

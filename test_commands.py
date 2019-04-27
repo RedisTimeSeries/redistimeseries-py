@@ -16,23 +16,23 @@ class RedisTimeSeriesTest(TestCase):
     def testCreate(self):
         '''Test TS.CREATE calls'''
 
-        self.assertTrue(rts.tsCreate(1))
-        self.assertTrue(rts.tsCreate(2, retentionSecs=5))
-        self.assertTrue(rts.tsCreate(3, labels={'Redis':'Labs'}))
-        self.assertTrue(rts.tsCreate(4, retentionSecs=20, labels={'Time':'Series'}))
-        info = rts.tsInfo(4)
+        self.assertTrue(rts.create(1))
+        self.assertTrue(rts.create(2, retentionSecs=5))
+        self.assertTrue(rts.create(3, labels={'Redis':'Labs'}))
+        self.assertTrue(rts.create(4, retentionSecs=20, labels={'Time':'Series'}))
+        info = rts.info(4)
         self.assertEqual(20, info.retentionSecs)
         self.assertEqual('Series', info.labels['Time'])
 
     def testAdd(self):
         '''Test TS.ADD calls'''
 
-        self.assertTrue(rts.tsAdd(1, 1, 1))
-        self.assertTrue(rts.tsAdd(2, 2, 3, retentionSecs=10))
-        self.assertTrue(rts.tsAdd(3, 3, 2, labels={'Redis':'Labs'}))
-        self.assertTrue(rts.tsAdd(5, 4, 2, retentionSecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
-        self.assertTrue(rts.tsAdd(4, '*', 1))
-        info = rts.tsInfo(5)
+        self.assertTrue(rts.add(1, 1, 1))
+        self.assertTrue(rts.add(2, 2, 3, retentionSecs=10))
+        self.assertTrue(rts.add(3, 3, 2, labels={'Redis':'Labs'}))
+        self.assertTrue(rts.add(5, 4, 2, retentionSecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
+        self.assertTrue(rts.add(4, '*', 1))
+        info = rts.info(5)
         self.assertEqual(10, info.retentionSecs)
         self.assertEqual('Labs', info.labels['Redis'])
 
@@ -41,79 +41,79 @@ class RedisTimeSeriesTest(TestCase):
 
         #test without counter reset
         for _ in range(100):
-            self.assertTrue(rts.tsIncreaseBy(1,1))
-        self.assertEqual(100, rts.tsGet(1)[1])
+            self.assertTrue(rts.incrby(1,1))
+        self.assertEqual(100, rts.get(1)[1])
         for _ in range(100):
-            self.assertTrue(rts.tsDecreaseBy(1,1))
-        self.assertEqual(0, rts.tsGet(1)[1])
+            self.assertTrue(rts.decrby(1,1))
+        self.assertEqual(0, rts.get(1)[1])
 
         #test with counter reset
         for _ in range(50):
-            self.assertTrue(rts.tsIncreaseBy(1,1,timeBucket=1))  
-            self.assertTrue(rts.tsDecreaseBy(2,1,timeBucket=1)) 
+            self.assertTrue(rts.incrby(1,1,timeBucket=1))  
+            self.assertTrue(rts.decrby(2,1,timeBucket=1)) 
         sleep(1.1)
-        self.assertTrue(rts.tsIncreaseBy(1,1,timeBucket=1))  
-        self.assertEqual(1, rts.tsGet(1)[1])
-        self.assertTrue(rts.tsDecreaseBy(2,1,timeBucket=1))  
-        self.assertEqual(-1, rts.tsGet(2)[1])
+        self.assertTrue(rts.incrby(1,1,timeBucket=1))  
+        self.assertEqual(1, rts.get(1)[1])
+        self.assertTrue(rts.decrby(2,1,timeBucket=1))  
+        self.assertEqual(-1, rts.get(2)[1])
 
     def testCreateRule(self):
         '''Test TS.CREATERULE and TS.DELETERULE calls'''
 
         # test rule creation
-        rts.tsCreate(1)
-        rts.tsCreate(2)
-        rts.tsCreateRule(1, 2, 'avg', 1)
+        rts.create(1)
+        rts.create(2)
+        rts.createrule(1, 2, 'avg', 1)
         for _ in range(50):
-            rts.tsAdd(1, '*', 1)
-            rts.tsAdd(1, '*', 2)
-        self.assertEqual(rts.tsGet(2)[1], 1.5)
-        info = rts.tsInfo(1)
+            rts.add(1, '*', 1)
+            rts.add(1, '*', 2)
+        self.assertEqual(rts.get(2)[1], 1.5)
+        info = rts.info(1)
         self.assertEqual(info.rules[0][1], 1)
 
         # test rule deletion
-        rts.tsDeleteRule(1, 2)
-        info = rts.tsInfo(1)
+        rts.deleterule(1, 2)
+        info = rts.info(1)
         self.assertFalse(info.rules)
 
     def testRange(self):
         '''Test TS.RANGE calls which returns range by key'''
 
         for i in range(100):
-            rts.tsAdd(1, i, i % 7)
-        self.assertTrue(100, len(rts.tsRange(1, 0, 200)))
+            rts.add(1, i, i % 7)
+        self.assertTrue(100, len(rts.range(1, 0, 200)))
         for i in range(100):
-            rts.tsAdd(1, i+200, i % 7)
-        self.assertTrue(200, len(rts.tsRange(1, 0, 500)))
-        self.assertTrue(20, len(rts.tsRange(1, 0, 500, aggregationType='avg', bucketSizeSeconds=10)))
+            rts.add(1, i+200, i % 7)
+        self.assertTrue(200, len(rts.range(1, 0, 500)))
+        self.assertTrue(20, len(rts.range(1, 0, 500, aggregationType='avg', bucketSizeSeconds=10)))
 
     def testMultiRange(self):
         '''Test TS.MRANGE calls which returns range by filter'''
 
-        rts.tsCreate(1, labels={'Test':'This'})
-        rts.tsCreate(2, labels={'Test':'This', 'Toste':'That'})
+        rts.create(1, labels={'Test':'This'})
+        rts.create(2, labels={'Test':'This', 'Toste':'That'})
         for i in range(100):
-            rts.tsAdd(1, i, i % 7)
-            rts.tsAdd(2, i, i % 11)
-        self.assertTrue(100, len(rts.tsMultiRange(0, 200, filters=['Test=This'])))
+            rts.add(1, i, i % 7)
+            rts.add(2, i, i % 11)
+        self.assertTrue(100, len(rts.mrange(0, 200, filters=['Test=This'])))
         for i in range(100):
-            rts.tsAdd(1, i+200, i % 7)
-        self.assertTrue(20, len(rts.tsMultiRange(0, 500, filters=['Test=This'],
+            rts.add(1, i+200, i % 7)
+        self.assertTrue(20, len(rts.mrange(0, 500, filters=['Test=This'],
                         aggregationType='avg', bucketSizeSeconds=10)))
 
     def testGet(self):
         '''Test TS.GET calls'''
 
-        rts.tsAdd(1, 2, 3)
-        self.assertEqual(2, rts.tsGet(1)[0])
-        rts.tsAdd(1, 3, 4)
-        self.assertEqual(4, rts.tsGet(1)[1])    
+        rts.add(1, 2, 3)
+        self.assertEqual(2, rts.get(1)[0])
+        rts.add(1, 3, 4)
+        self.assertEqual(4, rts.get(1)[1])    
 
     def testInfo(self):
         '''Test TS.INFO calls'''
 
-        rts.tsCreate(1, retentionSecs=5, labels={'currentLabel' : 'currentData'})
-        info = rts.tsInfo(1)
+        rts.create(1, retentionSecs=5, labels={'currentLabel' : 'currentData'})
+        info = rts.info(1)
         self.assertTrue(info.retentionSecs == 5)
         self.assertEqual(info.labels['currentLabel'], 'currentData')
 
