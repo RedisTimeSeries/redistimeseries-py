@@ -37,9 +37,8 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            pip install -r test-requirements.txt
-            pip install nose
-            nosetests -vsx test 
+            REDIS_PORT=6379 coverage run test_commands.py
+            codecov
             
       - store_artifacts:
           path: test-reports
@@ -77,9 +76,8 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            pip install -r test-requirements.txt
-            pip install nose
-            nosetests -vsx test  
+            REDIS_PORT=6379 coverage run test_commands.py
+            codecov  
 
       # no need for store_artifacts on nightly builds 
 
