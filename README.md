@@ -6,3 +6,16 @@
 
 # redistimeseries-py
 RedisTimeSeries python client
+
+## Installing
+
+1. Install Redis 5.0 or above
+
+2. [Install RedisTimeSeries](http://redistimeseries.io)
+
+3. Install the python client
+
+```sh
+$ pip install redistimeseries
+```
+
