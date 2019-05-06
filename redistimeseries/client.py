@@ -212,7 +212,8 @@ class Client(Redis): #changed from StrictRedis
         params = [fromTime, toTime]
         if aggregationType != None:
             self.appendAggregation(params, aggregationType, bucketSizeSeconds)
-        params.extend(['FILTER', *filters])
+        params.extend(['FILTER'])
+        params += filters
         return self.execute_command(self.MRANGE_CMD, *params)
 
     def get(self, key):
