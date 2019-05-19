@@ -86,9 +86,6 @@ class Client(Redis): #changed from StrictRedis
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)
 
-    AGGREGATIONS = [None, 'avg', 'sum', 'min', 'max', 
-                    'range', 'count', 'first', 'last']
-
     @staticmethod
     def appendRetention(params, retention):
         if retention is not None:
