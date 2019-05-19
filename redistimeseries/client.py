@@ -109,11 +109,8 @@ class Client(Redis): #changed from StrictRedis
     @staticmethod
     def appendAggregation(params, aggregationType, 
                           bucketSizeSeconds):     
-        if aggregationType not in Client.AGGREGATIONS:
-            raise DataError('Aggregation type is invalid')
-        else:
-            params.append('AGGREGATION')
-            params.extend([aggregationType, bucketSizeSeconds])
+        params.append('AGGREGATION')
+        params.extend([aggregationType, bucketSizeSeconds])
 
     def create(self, key, retentionSecs=None, labels={}):
         """
