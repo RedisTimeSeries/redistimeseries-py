@@ -86,9 +86,6 @@ class Client(Redis): #changed from StrictRedis
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)
 
-    AGGREGATIONS = [None, 'avg', 'sum', 'min', 'max', 
-                    'range', 'count', 'first', 'last']
-
     @staticmethod
     def appendRetention(params, retention):
         if retention is not None:
@@ -109,11 +106,8 @@ class Client(Redis): #changed from StrictRedis
     @staticmethod
     def appendAggregation(params, aggregationType, 
                           bucketSizeSeconds):     
-        if aggregationType not in Client.AGGREGATIONS:
-            raise DataError('Aggregation type is invalid')
-        else:
-            params.append('AGGREGATION')
-            params.extend([aggregationType, bucketSizeSeconds])
+        params.append('AGGREGATION')
+        params.extend([aggregationType, bucketSizeSeconds])
 
     def create(self, key, retentionSecs=None, labels={}):
         """
