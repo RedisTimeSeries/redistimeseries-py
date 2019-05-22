@@ -67,7 +67,7 @@ class RedisTimeSeriesTest(TestCase):
         for _ in range(50):
             rts.add(1, '*', 1)
             rts.add(1, '*', 2)
-        self.assertEqual(rts.get(2)[1], 1.5)
+        self.assertAlmostEqual(rts.get(2)[1], 1.5)
         info = rts.info(1)
         self.assertEqual(info.rules[0][1], 1)
 
