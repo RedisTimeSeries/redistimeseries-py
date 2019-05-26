@@ -72,6 +72,7 @@ class Client(Redis): #changed from StrictRedis
     GET_CMD = 'TS.GET'
     MGET_CMD = 'TS.MGET'
     INFO_CMD = 'TS.INFO'
+    QUERYINDEX_CMD = 'TS.QUERYINDEX'
 
     def __init__(self, *args, **kwargs):
         """
@@ -93,6 +94,7 @@ class Client(Redis): #changed from StrictRedis
             self.GET_CMD : lambda x: (int(x[0]), float(x[1])),
             self.MGET_CMD : parse_m_get,
             self.INFO_CMD : parse_info,
+            #SELF.QUERYINDEX_CMD : 
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)
@@ -245,3 +247,8 @@ class Client(Redis): #changed from StrictRedis
     def info(self, key):
         """Gets information of ``key``"""
         return self.execute_command(self.INFO_CMD, key)
+
+    def queryindex(self, filters):
+        """Get all the keys matching the ``filter`` list."""
+        return self.execute_command(self.QUERYINDEX_CMD, *filters)
+    

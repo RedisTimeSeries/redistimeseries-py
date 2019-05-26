@@ -133,12 +133,16 @@ class RedisTimeSeriesTest(TestCase):
 
     def testInfo(self):
         '''Test TS.INFO calls'''
-
         rts.create(1, retentionSecs=5, labels={'currentLabel' : 'currentData'})
         info = rts.info(1)
         self.assertTrue(info.retentionSecs == 5)
         self.assertEqual(info.labels['currentLabel'], 'currentData')
 
+    def testQueryIndex(self):
+        rts.create(1, labels={'Test':'This'})
+        rts.create(2, labels={'Test':'This', 'Taste':'That'})
+        self.assertEqual(2, len(rts.queryindex(['Test=This'])))       
+        self.assertEqual(1, len(rts.queryindex(['Taste=That'])))       
 
 if __name__ == '__main__':
     unittest.main()
