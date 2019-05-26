@@ -43,7 +43,7 @@ def parse_info(response):
 class Client(Redis): #changed from StrictRedis
     """
     This class subclasses redis-py's `Redis` and implements 
-    RedisTimeSeries's commmands (prefixed with "ts").
+    RedisTimeSeries's commands (prefixed with "ts").
     The client allows to interact with RedisTimeSeries and use all of
     it's functionality.
     """
@@ -54,6 +54,7 @@ class Client(Redis): #changed from StrictRedis
     }
 
     CREATE_CMD = 'TS.CREATE'
+    ALTER_CMD = 'TS.ALTER'
     ADD_CMD = 'TS.ADD'
     INCRBY_CMD = 'TS.INCRBY'
     DECRBY_CMD = 'TS.DECRBY'
@@ -73,6 +74,7 @@ class Client(Redis): #changed from StrictRedis
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
             self.CREATE_CMD : bool_ok,
+            self.ALTER_CMD : bool_ok, 
             self.ADD_CMD : bool_ok,
             self.INCRBY_CMD : bool_ok,
             self.DECRBY_CMD : bool_ok,
@@ -111,7 +113,7 @@ class Client(Redis): #changed from StrictRedis
 
     def create(self, key, retentionSecs=None, labels={}):
         """
-        Creates a new time-series ``key`` with ``rententionSecs`` in 
+        Creates a new time-series ``key`` with ``retentionSecs`` in 
         seconds and ``labels``.
         """
         params = [key]
@@ -120,6 +122,17 @@ class Client(Redis): #changed from StrictRedis
 
         return self.execute_command(self.CREATE_CMD, *params)
         
+    def alter(self, key, retentionSecs=None, labels={}):
+        """
+        Update the retention, labels of an existing key. The parameters 
+        are the same as TS.CREATE.
+        """
+        params = [key]
+        self.appendRetention(params, retentionSecs)
+        self.appendLabels(params, labels)
+
+        return self.execute_command(self.ALTER_CMD, *params)
+
     def add(self, key, timestamp, value, 
               retentionSecs=None, labels={}):
         """
@@ -136,7 +149,7 @@ class Client(Redis): #changed from StrictRedis
     def incrby(self, key, value, timeBucket=None,
                      retentionSecs=None, labels={}): 
         """
-        Increces latest value in ``key`` by ``value``.
+        Increases latest value in ``key`` by ``value``.
         ``timeBucket`` resets counter. In seconds.
         If ``key`` is created, ``retentionSecs`` and ``labels`` are
         applied. 

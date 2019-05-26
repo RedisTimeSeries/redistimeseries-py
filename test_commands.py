@@ -24,6 +24,16 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(20, info.retentionSecs)
         self.assertEqual('Series', info.labels['Time'])
 
+    def testAlter(self):
+        '''Test TS.ALTER calls'''
+        rts.create(1)
+        self.assertEqual(0, rts.info(1).retentionSecs)
+        rts.alter(1, retentionSecs=10)
+        self.assertEqual(10, rts.info(1).retentionSecs)
+        rts.alter(1, labels={'Time':'Series'})
+        self.assertEqual('Series', rts.info(1).labels['Time'])
+        self.assertEqual(10, rts.info(1).retentionSecs)
+
     def testAdd(self):
         '''Test TS.ADD calls'''
 
