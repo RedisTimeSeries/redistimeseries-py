@@ -35,6 +35,13 @@ def parse_m_range(response):
                                 parse_range(item[2])]})
     return res
 
+def parse_m_get(response):
+    res = []
+    for item in response:
+        res.append({ nativestr(item[0]) : [list_to_dict(item[1]), 
+                                item[2], nativestr(item[3])]})
+    return res
+
 def parse_info(response):
     res = dict(zip(map(nativestr, response[::2]), response[1::2]))
     info = TSInfo(res)
@@ -63,6 +70,7 @@ class Client(Redis): #changed from StrictRedis
     RANGE_CMD = 'TS.RANGE'
     MRANGE_CMD = 'TS.MRANGE'
     GET_CMD = 'TS.GET'
+    MGET_CMD = 'TS.MGET'
     INFO_CMD = 'TS.INFO'
 
     def __init__(self, *args, **kwargs):
@@ -83,6 +91,7 @@ class Client(Redis): #changed from StrictRedis
             self.RANGE_CMD : parse_range,
             self.MRANGE_CMD : parse_m_range,
             self.GET_CMD : lambda x: (int(x[0]), float(x[1])),
+            self.MGET_CMD : parse_m_get,
             self.INFO_CMD : parse_info,
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
@@ -227,6 +236,12 @@ class Client(Redis): #changed from StrictRedis
         """Gets the last sample of ``key``"""
         return self.execute_command(self.GET_CMD, key)
 
+    def mget(self, filters):
+        """Get the last samples matching the specific ``filter``."""
+        params = ['FILTER']
+        params += filters
+        return self.execute_command(self.MGET_CMD, *params)
+   
     def info(self, key):
         """Gets information of ``key``"""
         return self.execute_command(self.INFO_CMD, key)

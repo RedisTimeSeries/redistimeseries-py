@@ -101,7 +101,7 @@ class RedisTimeSeriesTest(TestCase):
         '''Test TS.MRANGE calls which returns range by filter'''
 
         rts.create(1, labels={'Test':'This'})
-        rts.create(2, labels={'Test':'This', 'Toste':'That'})
+        rts.create(2, labels={'Test':'This', 'Taste':'That'})
         for i in range(100):
             rts.add(1, i, i % 7)
             rts.add(2, i, i % 11)
@@ -118,6 +118,18 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(2, rts.get(1)[0])
         rts.add(1, 3, 4)
         self.assertEqual(4, rts.get(1)[1])    
+
+    def testMGet(self):
+        '''Test TS.MGET calls'''
+        rts.create(1, labels={'Test':'This'})
+        rts.create(2, labels={'Test':'This', 'Taste':'That'})
+        rts.add(1, '*', 15)
+        rts.add(2, '*', 25)
+        res = rts.mget(['Test=This'])
+        self.assertEqual('15', res[0]['1'][2])
+        self.assertEqual('25', res[1]['2'][2])
+        res = rts.mget(['Taste=That'])
+        self.assertEqual('25', res[0]['2'][2])
 
     def testInfo(self):
         '''Test TS.INFO calls'''
