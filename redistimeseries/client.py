@@ -47,6 +47,12 @@ def parse_info(response):
     info = TSInfo(res)
     return info   
 
+def parseToList(response):
+    res = []
+    for item in response:
+        res.append(nativestr(item))
+    return res
+
 class Client(Redis): #changed from StrictRedis
     """
     This class subclasses redis-py's `Redis` and implements 
@@ -94,7 +100,7 @@ class Client(Redis): #changed from StrictRedis
             self.GET_CMD : lambda x: (int(x[0]), float(x[1])),
             self.MGET_CMD : parse_m_get,
             self.INFO_CMD : parse_info,
-            #SELF.QUERYINDEX_CMD : 
+            self.QUERYINDEX_CMD : parseToList,
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)

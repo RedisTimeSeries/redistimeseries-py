@@ -143,6 +143,7 @@ class RedisTimeSeriesTest(TestCase):
         rts.create(2, labels={'Test':'This', 'Taste':'That'})
         self.assertEqual(2, len(rts.queryindex(['Test=This'])))       
         self.assertEqual(1, len(rts.queryindex(['Taste=That'])))       
+        self.assertEqual(['2'], rts.queryindex(['Taste=That']))       
 
 if __name__ == '__main__':
     unittest.main()
