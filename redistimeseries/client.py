@@ -14,12 +14,13 @@ class TSInfo(object):
     rules = []
 
     def __init__(self, args):
-        self.chunkCount = args['chunkCount']
-        self.labels = list_to_dict(args['labels'])
-        self.lastTimeStamp = args['lastTimestamp']
-        self.maxSamplesPerChunk = args['maxSamplesPerChunk']
-        self.retentionSecs = args['retentionSecs']
-        self.rules = args['rules']
+        response = dict(zip(map(nativestr, args[::2]), args[1::2]))
+        self.chunkCount = response['chunkCount']
+        self.labels = list_to_dict(response['labels'])
+        self.lastTimeStamp = response['lastTimestamp']
+        self.maxSamplesPerChunk = response['maxSamplesPerChunk']
+        self.retentionSecs = response['retentionSecs']
+        self.rules = response['rules']
 
 def list_to_dict(aList):
     return {nativestr(aList[i][0]):nativestr(aList[i][1])
@@ -41,12 +42,7 @@ def parse_m_get(response):
         res.append({ nativestr(item[0]) : [list_to_dict(item[1]), 
                                 item[2], nativestr(item[3])]})
     return res
-
-def parse_info(response):
-    res = dict(zip(map(nativestr, response[::2]), response[1::2]))
-    info = TSInfo(res)
-    return info   
-
+    
 def parseToList(response):
     res = []
     for item in response:
@@ -99,7 +95,7 @@ class Client(Redis): #changed from StrictRedis
             self.MRANGE_CMD : parse_m_range,
             self.GET_CMD : lambda x: (int(x[0]), float(x[1])),
             self.MGET_CMD : parse_m_get,
-            self.INFO_CMD : parse_info,
+            self.INFO_CMD : TSInfo,
             self.QUERYINDEX_CMD : parseToList,
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
