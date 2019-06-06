@@ -1,5 +1,5 @@
 import unittest
-
+import time
 from time import sleep
 from unittest import TestCase
 from redistimeseries.client import Client as RedisTimeSeries
@@ -27,11 +27,11 @@ class RedisTimeSeriesTest(TestCase):
     def testAdd(self):
         '''Test TS.ADD calls'''
 
-        self.assertTrue(rts.add(1, 1, 1))
-        self.assertTrue(rts.add(2, 2, 3, retentionSecs=10))
-        self.assertTrue(rts.add(3, 3, 2, labels={'Redis':'Labs'}))
-        self.assertTrue(rts.add(5, 4, 2, retentionSecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
-        self.assertTrue(rts.add(4, '*', 1))
+        self.assertEqual(1, rts.add(1, 1, 1))
+        self.assertEqual(2, rts.add(2, 2, 3, retentionSecs=10))
+        self.assertEqual(3, rts.add(3, 3, 2, labels={'Redis':'Labs'}))
+        self.assertEqual(4, rts.add(5, 4, 2, retentionSecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
+        self.assertEqual(int(time.time()), rts.add(4, '*', 1))
         info = rts.info(5)
         self.assertEqual(10, info.retentionSecs)
         self.assertEqual('Labs', info.labels['Redis'])

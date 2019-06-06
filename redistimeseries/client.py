@@ -2,6 +2,7 @@ import six
 import redis
 from redis import Redis, RedisError 
 from redis.client import bool_ok
+from redis.client import int_or_none
 from redis._compat import (long, nativestr)
 from redis.exceptions import DataError
 
@@ -73,7 +74,7 @@ class Client(Redis): #changed from StrictRedis
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
             self.CREATE_CMD : bool_ok,
-            self.ADD_CMD : bool_ok,
+            self.ADD_CMD : int_or_none,
             self.INCRBY_CMD : bool_ok,
             self.DECRBY_CMD : bool_ok,
             self.CREATERULE_CMD : bool_ok,
@@ -136,7 +137,7 @@ class Client(Redis): #changed from StrictRedis
     def incrby(self, key, value, timeBucket=None,
                      retentionSecs=None, labels={}): 
         """
-        Increces latest value in ``key`` by ``value``.
+        Increases latest value in ``key`` by ``value``.
         ``timeBucket`` resets counter. In seconds.
         If ``key`` is created, ``retentionSecs`` and ``labels`` are
         applied. 
