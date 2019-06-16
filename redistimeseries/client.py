@@ -1,30 +1,69 @@
-#import six
-from redis import Redis,  RedisError 
-'''Redis = StrictRedis from redis-py 3.0'''
-from redis.client import Pipeline, parse_info, bool_ok
-from redis.connection import Token
+import six
+import redis
+from redis import Redis, RedisError 
+from redis.client import bool_ok
+from redis.client import int_or_none
 from redis._compat import (long, nativestr)
 from redis.exceptions import DataError
-#from .path import Path
+
+class TSInfo(object):
+    chunkCount = None
+    labels = []
+    lastTimeStamp = None
+    maxSamplesPerChunk = None
+    retentionSecs = None
+    rules = []
+
+    def __init__(self, args):
+        self.chunkCount = args['chunkCount']
+        self.labels = list_to_dict(args['labels'])
+        self.lastTimeStamp = args['lastTimestamp']
+        self.maxSamplesPerChunk = args['maxSamplesPerChunk']
+        self.retentionSecs = args['retentionSecs']
+        self.rules = args['rules']
+
+def list_to_dict(aList):
+    return {nativestr(aList[i][0]):nativestr(aList[i][1])
+                for i in range(len(aList))}
 
 def parse_range(response):
-    pass
+    return [tuple((l[0], l[1].decode())) for l in response]
 
 def parse_m_range(response):
-    pass
+    res = []
+    for item in response:
+        res.append({ nativestr(item[0]) : [list_to_dict(item[1]), 
+                                parse_range(item[2])]})
+    return res
+
+def parse_info(response):
+    res = dict(zip(map(nativestr, response[::2]), response[1::2]))
+    info = TSInfo(res)
+    return info   
 
 class Client(Redis): #changed from StrictRedis
     """
-    This class subclasses redis-py's `Redis` and implements ReJSON's
-    commmands (prefixed with "json").
-    The client allows to interact with RedisTimeSeries and use all of it's
-    functionality 
+    This class subclasses redis-py's `Redis` and implements 
+    RedisTimeSeries's commmands (prefixed with "ts").
+    The client allows to interact with RedisTimeSeries and use all of
+    it's functionality.
     """
 
     MODULE_INFO = {
         'name': 'RedisTimeSeries',
         'ver':  '0.1.0'
     }
+
+    CREATE_CMD = 'TS.CREATE'
+    ADD_CMD = 'TS.ADD'
+    INCRBY_CMD = 'TS.INCRBY'
+    DECRBY_CMD = 'TS.DECRBY'
+    CREATERULE_CMD = 'TS.CREATERULE'
+    DELETERULE_CMD = 'TS.DELETERULE'
+    RANGE_CMD = 'TS.RANGE'
+    MRANGE_CMD = 'TS.MRANGE'
+    GET_CMD = 'TS.GET'
+    INFO_CMD = 'TS.INFO'
 
     def __init__(self, *args, **kwargs):
         """
@@ -34,121 +73,148 @@ class Client(Redis): #changed from StrictRedis
             
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
-            'TS.CREATE' : bool_ok,
-            'TS.ADD': bool_ok,
-            'TS.INCRBY': bool_ok,
-            'TS.DECRBY': bool_ok,
-            'TS.CREATERULE': bool_ok,
-            'TS.DELETERULE':bool_ok,
-            'TS.RANGE': parse_range,
-            'TS.MRANGE': parse_m_range,
-            #'TS.GET': , response is enough
-            'TS.INFO': parse_info, # TODO
+            self.CREATE_CMD : bool_ok,
+            self.ADD_CMD : int_or_none,
+            self.INCRBY_CMD : bool_ok,
+            self.DECRBY_CMD : bool_ok,
+            self.CREATERULE_CMD : bool_ok,
+            self.DELETERULE_CMD : bool_ok,
+            self.RANGE_CMD : parse_range,
+            self.MRANGE_CMD : parse_m_range,
+            self.GET_CMD : lambda x: (int(x[0]), float(x[1])),
+            self.INFO_CMD : parse_info,
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)
 
-    AGGREGATIONS = [None, 'avg', 'sum', 'min', 'max', 
-                    'range', 'count', 'first', 'last']
-
-    #Another idea
-    class cls_AGGREGATIONS:
-        NONE = None
-        AVG = 'avg'
-        SUM = 'sum'
-        MIN = 'min'
-        MAX = 'max'
-        RANGE = 'range'
-        COUNT = 'count'
-        FIRST = 'first'
-        LAST = 'last'
-    
-    def tsCreate(self, key, retention=None, *labels):
-        '''Create a new time-series'''
-        params = [key]
+    @staticmethod
+    def appendRetention(params, retention):
         if retention is not None:
-            params.append(retention)
+            params.extend(['RETENTION', retention])
+            
+    @staticmethod
+    def appendTimeBucket(params, timeBucket):
+        if timeBucket is not None:
+            params.extend(['RESET', timeBucket])
+
+    @staticmethod
+    def appendLabels(params, labels):
         if labels:
-            params.append(labels)
-        return self.execute_command('TS.CREATE', params)
+            params.append('LABELS')
+            for k, v in labels.items():
+                params.extend([k,v])
+
+    @staticmethod
+    def appendAggregation(params, aggregationType, 
+                          bucketSizeSeconds):     
+        params.append('AGGREGATION')
+        params.extend([aggregationType, bucketSizeSeconds])
+
+    def create(self, key, retentionSecs=None, labels={}):
+        """
+        Creates a new time-series ``key`` with ``rententionSecs`` in 
+        seconds and ``labels``.
+        """
+        params = [key]
+        self.appendRetention(params, retentionSecs)
+        self.appendLabels(params, labels)
+
+        return self.execute_command(self.CREATE_CMD, *params)
         
-    def tsAdd(self, key, timestamp, value, retention=None, *labels):
-        '''Append (or create and append) a new value to the series'''
+    def add(self, key, timestamp, value, 
+              retentionSecs=None, labels={}):
+        """
+        Appends (or creates and appends) a new ``value`` to series 
+        ``key`` with ``timestamp``. If ``key`` is created, 
+        ``retentionSecs`` and ``labels`` are applied.
+        """
         params = [key, timestamp, value]
-        if retention is not None:
-            params.append(retention)
-        params.append(labels)
-        return self.execute_command('TS.ADD', params)
+        self.appendRetention(params, retentionSecs)
+        self.appendLabels(params, labels)
 
-    def tsIncreaseBy(self, key, value, reset, retention=None, *labels): 
-        '''Increment the latest value'''
-        params = [key, value, reset]
-        if retention is not None:
-            params.append(retention)
-        params.append(labels)
-        return self.execute_command('TS.INCRBY', params)
+        return self.execute_command(self.ADD_CMD, *params)
 
-    def tsDecreaseBy(self, key, value, reset, retention=None, *labels):  
-        '''Decrease the latest value'''
-        params = [key, value, reset]
-        if retention is not None:
-            params.append(retention)
-        params.append(labels)
-        return self.execute_command('TS.INCRBY', params)
+    def incrby(self, key, value, timeBucket=None,
+                     retentionSecs=None, labels={}): 
+        """
+        Increases latest value in ``key`` by ``value``.
+        ``timeBucket`` resets counter. In seconds.
+        If ``key`` is created, ``retentionSecs`` and ``labels`` are
+        applied. 
+        """
+        params = [key, value]
+        self.appendTimeBucket(params, timeBucket)
+        self.appendRetention(params, retentionSecs)
+        self.appendLabels(params, labels)
 
-    def tsCreateRule(self, sourceKey, destKey, 
+        return self.execute_command(self.INCRBY_CMD, *params)
+
+    def decrby(self, key, value, timeBucket=None,
+                     retentionSecs=None, labels={}):  
+        """
+        Decreases latest value in ``key`` by ``value``.
+        ``timeBucket`` resets counter. In seconds.
+        If ``key`` is created, ``retentionSecs`` and ``labels`` are
+        applied. 
+        """
+        params = [key, value]
+        self.appendTimeBucket(params, timeBucket)
+        self.appendRetention(params, retentionSecs)
+        self.appendLabels(params, labels)
+        
+        return self.execute_command(self.DECRBY_CMD, *params)
+
+    def createrule(self, sourceKey, destKey, 
                      aggregationType, bucketSizeSeconds):
-        '''Create a compaction rule'''
-        params = [sourceKey, destKey]
-        if aggregationType not in self.AGGREGATIONS:
-            raise DataError('Aggregation type is invalid')
-        elif not isinstance(int(bucketSizeSeconds), int):
-            raise DataError('bucketSizeSeconds is invalid')
-        else:
-            params.append(Token.get_token('AGGREGATION'))
-            params.extend([aggregationType, bucketSizeSeconds])
-        return self.execute_command('TS.CREATERULE', params)
+        """
+        Creates a compaction rule from values added to ``sourceKey`` 
+        into ``destKey``. Aggregating for ``bucketSizeSeconds`` where an
+        ``aggregationType`` can be ['avg', 'sum', 'min', 'max',
+        'range', 'count', 'first', 'last']
+        """
+        params=[sourceKey, destKey]
+        self.appendAggregation(params, aggregationType, bucketSizeSeconds)
 
-    def tsDeleteRule(self, sourceKey, destKey):
-        '''Delete a compaction rule'''
-        return self.execute_command('TS.DELETERULE', sourceKey, destKey)
+        return self.execute_command(self.CREATERULE_CMD, *params)
+
+    def deleterule(self, sourceKey, destKey):
+        """Deletes a compaction rule"""
+        return self.execute_command(self.DELETERULE_CMD, sourceKey, destKey)
    
-    def tsRange(self, key, fromTime, toTime, 
-                aggregationType = None, bucketSizeSeconds = 0):
-        '''Query a range'''
+    def range(self, key, fromTime, toTime, 
+                aggregationType=None, bucketSizeSeconds=0):
+        """
+        Query a range from ``key``, from ``fromTime`` to ``toTime``.
+        Can Aggregate for ``bucketSizeSeconds`` where an ``aggregationType``
+        can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
+        'last']
+        """
         params = [key, fromTime, toTime]
-        if aggregationType is not None:        
-            if aggregationType not in self.AGGREGATIONS:
-                raise DataError('Aggregation type is invalid')
-            elif not isinstance(int(bucketSizeSeconds), int):
-                raise DataError('bucketSizeSeconds is invalid')
-            else:
-                params.append(Token.get_token('AGGREGATION'))
-                params.extend([aggregationType, bucketSizeSeconds])
-        return self.execute_command('TS.RANGE', params)
+        if aggregationType != None:
+            self.appendAggregation(params, aggregationType, bucketSizeSeconds)
 
-    def tsMultiRange(self, fromTime, toTime, *filters, 
-                     aggregationType = None, bucketSizeSeconds = 0):
-        '''Query a range by filters'''
+        return self.execute_command(self.RANGE_CMD, *params)
+
+    def mrange(self, fromTime, toTime, filters,
+                     aggregationType=None, bucketSizeSeconds=0):
+        """
+        Query a range based on filters,retentionSecs from ``fromTime`` to ``toTime``.
+        ``filters`` are a list strings such as ['Test=This'].
+        Can Aggregate for ``bucketSizeSeconds`` where an ``aggregationType``
+        can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
+        'last']
+        """
         params = [fromTime, toTime]
-        if aggregationType is not None:        
-            if aggregationType not in self.AGGREGATIONS:
-                raise DataError('Aggregation type is invalid')
-            elif not isinstance(int(bucketSizeSeconds), int):
-                raise DataError('bucketSizeSeconds is invalid')
-            else:
-                params.append(Token.get_token('AGGREGATION'))
-                params.extend([aggregationType, bucketSizeSeconds])
-        params.append(*filters)
-        return self.execute_command('TS.MRANGE', params)
+        if aggregationType != None:
+            self.appendAggregation(params, aggregationType, bucketSizeSeconds)
+        params.extend(['FILTER'])
+        params += filters
+        return self.execute_command(self.MRANGE_CMD, *params)
 
-    def tsGet(self, key):
-        '''Get the last sample'''
-        return self.execute_command('TS.GET', key)
+    def get(self, key):
+        """Gets the last sample of ``key``"""
+        return self.execute_command(self.GET_CMD, key)
 
-    def tsInfo(self, key):
-        '''Get the last sample'''
-        return self.execute_command('TS.INFO', key)
-
-client = Client()
-client.tsCreate(1)
+    def info(self, key):
+        """Gets information of ``key``"""
+        return self.execute_command(self.INFO_CMD, key)

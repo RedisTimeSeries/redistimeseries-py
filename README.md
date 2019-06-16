@@ -4,7 +4,6 @@
 [![GitHub issues](https://img.shields.io/github/release/RedisTimeSeries/redistimeseries-py.svg)](https://github.com/RedisTimeSeries/redistimeseries-py/releases/latest)
 [![Codecov](https://codecov.io/gh/RedisTimeSeries/redistimeseries-py/branch/master/graph/badge.svg)](https://codecov.io/gh/RedisTimeSeries/redistimeseries-py)
 
-
 redistimeseries-py is a package that gives developers easy access to RedisTimeSeries module. The package extends [redis-py](https://github.com/andymccurdy/redis-py)'s interface with RedisTimeSeries's API.  
 
 ### Installation
