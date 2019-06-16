@@ -2,15 +2,16 @@ import six
 import redis
 from redis import Redis, RedisError 
 from redis.client import bool_ok
+from redis.client import int_or_none
 from redis._compat import (long, nativestr)
 from redis.exceptions import DataError
 
 class TSInfo(object):
-    chunkCount = None
+    chunk_count = None
     labels = []
-    lastTimeStamp = None
-    maxSamplesPerChunk = None
-    retentionSecs = None
+    last_time_stamp = None
+    max_samples_per_chunk = None
+    retention_secs = None
     rules = []
 
     def __init__(self, args):
@@ -107,9 +108,9 @@ class Client(Redis): #changed from StrictRedis
             params.extend(['RETENTION', retention])
             
     @staticmethod
-    def appendTimeBucket(params, timeBucket):
-        if timeBucket is not None:
-            params.extend(['RESET', timeBucket])
+    def appendTimeBucket(params, time_bucket):
+        if time_bucket is not None:
+            params.extend(['RESET', time_bucket])
 
     @staticmethod
     def appendLabels(params, labels):
@@ -119,18 +120,18 @@ class Client(Redis): #changed from StrictRedis
                 params.extend([k,v])
 
     @staticmethod
-    def appendAggregation(params, aggregationType, 
-                          bucketSizeSeconds):     
+    def appendAggregation(params, aggregation_type, 
+                          bucket_size_seconds):     
         params.append('AGGREGATION')
-        params.extend([aggregationType, bucketSizeSeconds])
+        params.extend([aggregation_type, bucket_size_seconds])
 
-    def create(self, key, retentionSecs=None, labels={}):
+    def create(self, key, retention_secs=None, labels={}):
         """
         Creates a new time-series ``key`` with ``retentionSecs`` in 
         seconds and ``labels``.
         """
         params = [key]
-        self.appendRetention(params, retentionSecs)
+        self.appendRetention(params, retention_secs)
         self.appendLabels(params, labels)
 
         return self.execute_command(self.CREATE_CMD, *params)
@@ -147,20 +148,20 @@ class Client(Redis): #changed from StrictRedis
         return self.execute_command(self.ALTER_CMD, *params)
 
     def add(self, key, timestamp, value, 
-              retentionSecs=None, labels={}):
+              retention_secs=None, labels={}):
         """
         Appends (or creates and appends) a new ``value`` to series 
         ``key`` with ``timestamp``. If ``key`` is created, 
-        ``retentionSecs`` and ``labels`` are applied.
+        ``retention_secs`` and ``labels`` are applied.
         """
         params = [key, timestamp, value]
-        self.appendRetention(params, retentionSecs)
+        self.appendRetention(params, retention_secs)
         self.appendLabels(params, labels)
 
         return self.execute_command(self.ADD_CMD, *params)
 
-    def incrby(self, key, value, timeBucket=None,
-                     retentionSecs=None, labels={}): 
+    def incrby(self, key, value, time_bucket=None,
+                     retention_secs=None, labels={}): 
         """
         Increases latest value in ``key`` by ``value``.
         ``timeBucket`` resets counter. In seconds.
@@ -168,70 +169,70 @@ class Client(Redis): #changed from StrictRedis
         applied. 
         """
         params = [key, value]
-        self.appendTimeBucket(params, timeBucket)
-        self.appendRetention(params, retentionSecs)
+        self.appendTimeBucket(params, time_bucket)
+        self.appendRetention(params, retention_secs)
         self.appendLabels(params, labels)
 
         return self.execute_command(self.INCRBY_CMD, *params)
 
-    def decrby(self, key, value, timeBucket=None,
-                     retentionSecs=None, labels={}):  
+    def decrby(self, key, value, time_bucket=None,
+                     retention_secs=None, labels={}):  
         """
         Decreases latest value in ``key`` by ``value``.
-        ``timeBucket`` resets counter. In seconds.
-        If ``key`` is created, ``retentionSecs`` and ``labels`` are
+        ``time_bucket`` resets counter. In seconds.
+        If ``key`` is created, ``retention_secs`` and ``labels`` are
         applied. 
         """
         params = [key, value]
-        self.appendTimeBucket(params, timeBucket)
-        self.appendRetention(params, retentionSecs)
+        self.appendTimeBucket(params, time_bucket)
+        self.appendRetention(params, retention_secs)
         self.appendLabels(params, labels)
         
         return self.execute_command(self.DECRBY_CMD, *params)
 
-    def createrule(self, sourceKey, destKey, 
-                     aggregationType, bucketSizeSeconds):
+    def createrule(self, source_key, dest_key, 
+                     aggregation_type, bucket_size_seconds):
         """
-        Creates a compaction rule from values added to ``sourceKey`` 
-        into ``destKey``. Aggregating for ``bucketSizeSeconds`` where an
-        ``aggregationType`` can be ['avg', 'sum', 'min', 'max',
+        Creates a compaction rule from values added to ``source_key`` 
+        into ``dest_key``. Aggregating for ``bucket_size_seconds`` where an
+        ``aggregation_type`` can be ['avg', 'sum', 'min', 'max',
         'range', 'count', 'first', 'last']
         """
-        params=[sourceKey, destKey]
-        self.appendAggregation(params, aggregationType, bucketSizeSeconds)
+        params=[source_key, dest_key]
+        self.appendAggregation(params, aggregation_type, bucket_size_seconds)
 
         return self.execute_command(self.CREATERULE_CMD, *params)
 
-    def deleterule(self, sourceKey, destKey):
+    def deleterule(self, source_key, dest_key):
         """Deletes a compaction rule"""
-        return self.execute_command(self.DELETERULE_CMD, sourceKey, destKey)
+        return self.execute_command(self.DELETERULE_CMD, source_key, dest_key)
    
-    def range(self, key, fromTime, toTime, 
-                aggregationType=None, bucketSizeSeconds=0):
+    def range(self, key, from_time, to_time, 
+                aggregation_type=None, bucket_size_seconds=0):
         """
-        Query a range from ``key``, from ``fromTime`` to ``toTime``.
-        Can Aggregate for ``bucketSizeSeconds`` where an ``aggregationType``
+        Query a range from ``key``, from ``from_time`` to ``to_time``.
+        Can Aggregate for ``bucket_size_seconds`` where an ``aggregation_type``
         can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
         'last']
         """
-        params = [key, fromTime, toTime]
-        if aggregationType != None:
-            self.appendAggregation(params, aggregationType, bucketSizeSeconds)
+        params = [key, from_time, to_time]
+        if aggregation_type != None:
+            self.appendAggregation(params, aggregation_type, bucket_size_seconds)
 
         return self.execute_command(self.RANGE_CMD, *params)
 
-    def mrange(self, fromTime, toTime, filters,
-                     aggregationType=None, bucketSizeSeconds=0):
+    def mrange(self, from_time, to_time, filters,
+                     aggregation_type=None, bucket_size_seconds=0):
         """
-        Query a range based on filters,retentionSecs from ``fromTime`` to ``toTime``.
+        Query a range based on filters,retention_secs from ``from_time`` to ``to_time``.
         ``filters`` are a list strings such as ['Test=This'].
-        Can Aggregate for ``bucketSizeSeconds`` where an ``aggregationType``
+        Can Aggregate for ``bucket_size_seconds`` where an ``aggregation_type``
         can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
         'last']
         """
-        params = [fromTime, toTime]
-        if aggregationType != None:
-            self.appendAggregation(params, aggregationType, bucketSizeSeconds)
+        params = [from_time, to_time]
+        if aggregation_type != None:
+            self.appendAggregation(params, aggregation_type, bucket_size_seconds)
         params.extend(['FILTER'])
         params += filters
         return self.execute_command(self.MRANGE_CMD, *params)
