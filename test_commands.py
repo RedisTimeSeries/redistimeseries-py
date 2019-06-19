@@ -24,6 +24,16 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(20, info.retention_secs)
         self.assertEqual('Series', info.labels['Time'])
 
+    def testAlter(self):
+        '''Test TS.ALTER calls'''
+        rts.create(1)
+        self.assertEqual(0, rts.info(1).retention_secs)
+        rts.alter(1, retention_secs=10)
+        self.assertEqual(10, rts.info(1).retention_secs)
+        rts.alter(1, labels={'Time':'Series'})
+        self.assertEqual('Series', rts.info(1).labels['Time'])
+        self.assertEqual(10, rts.info(1).retention_secs)
+
     def testAdd(self):
         '''Test TS.ADD calls'''
 
@@ -91,7 +101,7 @@ class RedisTimeSeriesTest(TestCase):
         '''Test TS.MRANGE calls which returns range by filter'''
 
         rts.create(1, labels={'Test':'This'})
-        rts.create(2, labels={'Test':'This', 'Toste':'That'})
+        rts.create(2, labels={'Test':'This', 'Taste':'That'})
         for i in range(100):
             rts.add(1, i, i % 7)
             rts.add(2, i, i % 11)
@@ -109,14 +119,31 @@ class RedisTimeSeriesTest(TestCase):
         rts.add(1, 3, 4)
         self.assertEqual(4, rts.get(1)[1])    
 
+    def testMGet(self):
+        '''Test TS.MGET calls'''
+        rts.create(1, labels={'Test':'This'})
+        rts.create(2, labels={'Test':'This', 'Taste':'That'})
+        rts.add(1, '*', 15)
+        rts.add(2, '*', 25)
+        res = rts.mget(['Test=This'])
+        self.assertEqual('15', res[0]['1'][2])
+        self.assertEqual('25', res[1]['2'][2])
+        res = rts.mget(['Taste=That'])
+        self.assertEqual('25', res[0]['2'][2])
+
     def testInfo(self):
         '''Test TS.INFO calls'''
-
         rts.create(1, retention_secs=5, labels={'currentLabel' : 'currentData'})
         info = rts.info(1)
         self.assertTrue(info.retention_secs == 5)
         self.assertEqual(info.labels['currentLabel'], 'currentData')
 
+    def testQueryIndex(self):
+        rts.create(1, labels={'Test':'This'})
+        rts.create(2, labels={'Test':'This', 'Taste':'That'})
+        self.assertEqual(2, len(rts.queryindex(['Test=This'])))       
+        self.assertEqual(1, len(rts.queryindex(['Taste=That'])))       
+        self.assertEqual(['2'], rts.queryindex(['Taste=That']))       
 
 if __name__ == '__main__':
     unittest.main()

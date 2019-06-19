@@ -15,12 +15,13 @@ class TSInfo(object):
     rules = []
 
     def __init__(self, args):
-        self.chunk_count = args['chunkCount']
-        self.labels = list_to_dict(args['labels'])
-        self.last_time_stamp = args['lastTimestamp']
-        self.max_samples_per_chunk = args['maxSamplesPerChunk']
-        self.retention_secs = args['retentionSecs']
-        self.rules = args['rules']
+        response = dict(zip(map(nativestr, args[::2]), args[1::2]))
+        self.chunkCount = response['chunkCount']
+        self.labels = list_to_dict(response['labels'])
+        self.lastTimeStamp = response['lastTimestamp']
+        self.maxSamplesPerChunk = response['maxSamplesPerChunk']
+        self.retention_secs = response['retentionSecs']
+        self.rules = response['rules']
 
 def list_to_dict(aList):
     return {nativestr(aList[i][0]):nativestr(aList[i][1])
@@ -36,15 +37,23 @@ def parse_m_range(response):
                                 parse_range(item[2])]})
     return res
 
-def parse_info(response):
-    res = dict(zip(map(nativestr, response[::2]), response[1::2]))
-    info = TSInfo(res)
-    return info   
+def parse_m_get(response):
+    res = []
+    for item in response:
+        res.append({ nativestr(item[0]) : [list_to_dict(item[1]), 
+                                item[2], nativestr(item[3])]})
+    return res
+    
+def parseToList(response):
+    res = []
+    for item in response:
+        res.append(nativestr(item))
+    return res
 
 class Client(Redis): #changed from StrictRedis
     """
     This class subclasses redis-py's `Redis` and implements 
-    RedisTimeSeries's commmands (prefixed with "ts").
+    RedisTimeSeries's commands (prefixed with "ts").
     The client allows to interact with RedisTimeSeries and use all of
     it's functionality.
     """
@@ -55,6 +64,7 @@ class Client(Redis): #changed from StrictRedis
     }
 
     CREATE_CMD = 'TS.CREATE'
+    ALTER_CMD = 'TS.ALTER'
     ADD_CMD = 'TS.ADD'
     INCRBY_CMD = 'TS.INCRBY'
     DECRBY_CMD = 'TS.DECRBY'
@@ -63,7 +73,9 @@ class Client(Redis): #changed from StrictRedis
     RANGE_CMD = 'TS.RANGE'
     MRANGE_CMD = 'TS.MRANGE'
     GET_CMD = 'TS.GET'
+    MGET_CMD = 'TS.MGET'
     INFO_CMD = 'TS.INFO'
+    QUERYINDEX_CMD = 'TS.QUERYINDEX'
 
     def __init__(self, *args, **kwargs):
         """
@@ -74,7 +86,8 @@ class Client(Redis): #changed from StrictRedis
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
             self.CREATE_CMD : bool_ok,
-            self.ADD_CMD : int_or_none,
+            self.ALTER_CMD : bool_ok, 
+            #self.ADD_CMD : bool_ok,
             self.INCRBY_CMD : bool_ok,
             self.DECRBY_CMD : bool_ok,
             self.CREATERULE_CMD : bool_ok,
@@ -82,7 +95,9 @@ class Client(Redis): #changed from StrictRedis
             self.RANGE_CMD : parse_range,
             self.MRANGE_CMD : parse_m_range,
             self.GET_CMD : lambda x: (int(x[0]), float(x[1])),
-            self.INFO_CMD : parse_info,
+            self.MGET_CMD : parse_m_get,
+            self.INFO_CMD : TSInfo,
+            self.QUERYINDEX_CMD : parseToList,
         }
         for k, v in six.iteritems(MODULE_CALLBACKS):
             self.set_response_callback(k, v)
@@ -112,7 +127,7 @@ class Client(Redis): #changed from StrictRedis
 
     def create(self, key, retention_secs=None, labels={}):
         """
-        Creates a new time-series ``key`` with ``rententionSecs`` in 
+        Creates a new time-series ``key`` with ``retention_secs`` in 
         seconds and ``labels``.
         """
         params = [key]
@@ -121,6 +136,17 @@ class Client(Redis): #changed from StrictRedis
 
         return self.execute_command(self.CREATE_CMD, *params)
         
+    def alter(self, key, retention_secs=None, labels={}):
+        """
+        Update the retention, labels of an existing key. The parameters 
+        are the same as TS.CREATE.
+        """
+        params = [key]
+        self.appendRetention(params, retention_secs)
+        self.appendLabels(params, labels)
+
+        return self.execute_command(self.ALTER_CMD, *params)
+
     def add(self, key, timestamp, value, 
               retention_secs=None, labels={}):
         """
@@ -138,7 +164,7 @@ class Client(Redis): #changed from StrictRedis
                      retention_secs=None, labels={}): 
         """
         Increases latest value in ``key`` by ``value``.
-        ``time_bucket`` resets counter. In seconds.
+        ``timeBucket`` resets counter. In seconds.
         If ``key`` is created, ``retention_secs`` and ``labels`` are
         applied. 
         """
@@ -215,6 +241,16 @@ class Client(Redis): #changed from StrictRedis
         """Gets the last sample of ``key``"""
         return self.execute_command(self.GET_CMD, key)
 
+    def mget(self, filters):
+        """Get the last samples matching the specific ``filter``."""
+        params = ['FILTER']
+        params += filters
+        return self.execute_command(self.MGET_CMD, *params)
+   
     def info(self, key):
         """Gets information of ``key``"""
         return self.execute_command(self.INFO_CMD, key)
+
+    def queryindex(self, filters):
+        """Get all the keys matching the ``filter`` list."""
+        return self.execute_command(self.QUERYINDEX_CMD, *filters)
