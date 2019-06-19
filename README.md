@@ -12,7 +12,7 @@ $ pip install redistimeseries
 ```
 
 ### API
-For complete documentation about RedisTimeSeries's commands, refer to [RedisTimeSeries's website](http://redistimeseries.io/).
+The complete documentation of RedisTimeSeries's commands can be found at [RedisTimeSeries's website](http://redistimeseries.io/).
 
 ### Usage example
 
