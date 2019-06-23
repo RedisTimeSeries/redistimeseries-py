@@ -17,34 +17,43 @@ class RedisTimeSeriesTest(TestCase):
         '''Test TS.CREATE calls'''
 
         self.assertTrue(rts.create(1))
-        self.assertTrue(rts.create(2, retention_secs=5))
+        self.assertTrue(rts.create(2, retention_msecs=5))
         self.assertTrue(rts.create(3, labels={'Redis':'Labs'}))
-        self.assertTrue(rts.create(4, retention_secs=20, labels={'Time':'Series'}))
+        self.assertTrue(rts.create(4, retention_msecs=20, labels={'Time':'Series'}))
         info = rts.info(4)
-        self.assertEqual(20, info.retention_secs)
+        self.assertEqual(20, info.retention_msecs)
         self.assertEqual('Series', info.labels['Time'])
 
     def testAlter(self):
         '''Test TS.ALTER calls'''
         rts.create(1)
-        self.assertEqual(0, rts.info(1).retention_secs)
-        rts.alter(1, retention_secs=10)
-        self.assertEqual(10, rts.info(1).retention_secs)
+        self.assertEqual(0, rts.info(1).retention_msecs)
+        rts.alter(1, retention_msecs=10)
+        self.assertEqual(10, rts.info(1).retention_msecs)
         rts.alter(1, labels={'Time':'Series'})
         self.assertEqual('Series', rts.info(1).labels['Time'])
-        self.assertEqual(10, rts.info(1).retention_secs)
+        self.assertEqual(10, rts.info(1).retention_msecs)
 
     def testAdd(self):
         '''Test TS.ADD calls'''
 
         self.assertEqual(1, rts.add(1, 1, 1))
-        self.assertEqual(2, rts.add(2, 2, 3, retention_secs=10))
+        self.assertEqual(2, rts.add(2, 2, 3, retention_msecs=10))
         self.assertEqual(3, rts.add(3, 3, 2, labels={'Redis':'Labs'}))
-        self.assertEqual(4, rts.add(5, 4, 2, retention_secs=10, labels={'Redis':'Labs', 'Time':'Series'}))
-        self.assertEqual(int(time.time()), rts.add(4, '*', 1))
+        self.assertEqual(4, rts.add(5, 4, 2, retention_msecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
+        
+        self.assertEqual(int(time.time() * 1000), rts.add(4, '*', 1))
         info = rts.info(5)
-        self.assertEqual(10, info.retention_secs)
+        self.assertEqual(10, info.retention_msecs)
         self.assertEqual('Labs', info.labels['Redis'])
+
+    def testMAdd(self):
+        '''Test TS.MADD calls'''
+
+        rts.create('a')
+        self.assertEqual([1, 2, 3], rts.madd([('a', 1, 5), ('a', 2, 10), ('a', 3, 15)]))
+        res = rts.madd([('a', '*', 5), ('a', '*', 10), ('a', '*', 15)])
+        self.assertTrue(res[0] == res[2] or res[0] + 10 > res[2])
 
     def testIncrbyDecrby(self):
         '''Test TS.INCRBY and TS.DECRBY calls'''
@@ -73,13 +82,13 @@ class RedisTimeSeriesTest(TestCase):
         # test rule creation
         rts.create(1)
         rts.create(2)
-        rts.createrule(1, 2, 'avg', 1)
+        rts.createrule(1, 2, 'avg', 1000)
         for _ in range(50):
             rts.add(1, '*', 1)
             rts.add(1, '*', 2)
         self.assertAlmostEqual(rts.get(2)[1], 1.5)
         info = rts.info(1)
-        self.assertEqual(info.rules[0][1], 1)
+        self.assertEqual(info.rules[0][1], 1000)
 
         # test rule deletion
         rts.deleterule(1, 2)
@@ -95,7 +104,7 @@ class RedisTimeSeriesTest(TestCase):
         for i in range(100):
             rts.add(1, i+200, i % 7)
         self.assertTrue(200, len(rts.range(1, 0, 500)))
-        self.assertTrue(20, len(rts.range(1, 0, 500, aggregation_type='avg', bucket_size_seconds=10)))
+        self.assertTrue(20, len(rts.range(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
 
     def testMultiRange(self):
         '''Test TS.MRANGE calls which returns range by filter'''
@@ -109,7 +118,7 @@ class RedisTimeSeriesTest(TestCase):
         for i in range(100):
             rts.add(1, i+200, i % 7)
         self.assertTrue(20, len(rts.mrange(0, 500, filters=['Test=This'],
-                        aggregation_type='avg', bucket_size_seconds=10)))
+                        aggregation_type='avg', bucket_size_msec=10)))
 
     def testGet(self):
         '''Test TS.GET calls'''
@@ -133,9 +142,9 @@ class RedisTimeSeriesTest(TestCase):
 
     def testInfo(self):
         '''Test TS.INFO calls'''
-        rts.create(1, retention_secs=5, labels={'currentLabel' : 'currentData'})
+        rts.create(1, retention_msecs=5, labels={'currentLabel' : 'currentData'})
         info = rts.info(1)
-        self.assertTrue(info.retention_secs == 5)
+        self.assertTrue(info.retention_msecs == 5)
         self.assertEqual(info.labels['currentLabel'], 'currentData')
 
     def testQueryIndex(self):
