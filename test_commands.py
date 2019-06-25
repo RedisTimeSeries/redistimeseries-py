@@ -26,9 +26,11 @@ class RedisTimeSeriesTest(TestCase):
 
     def testAlter(self):
         '''Test TS.ALTER calls'''
+
         rts.create(1)
         self.assertEqual(0, rts.info(1).retention_msecs)
         rts.alter(1, retention_msecs=10)
+        self.assertEqual({}, rts.info(1).labels)
         self.assertEqual(10, rts.info(1).retention_msecs)
         rts.alter(1, labels={'Time':'Series'})
         self.assertEqual('Series', rts.info(1).labels['Time'])
@@ -40,10 +42,10 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(1, rts.add(1, 1, 1))
         self.assertEqual(2, rts.add(2, 2, 3, retention_msecs=10))
         self.assertEqual(3, rts.add(3, 3, 2, labels={'Redis':'Labs'}))
-        self.assertEqual(4, rts.add(5, 4, 2, retention_msecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
+        self.assertEqual(4, rts.add(4, 4, 2, retention_msecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
         
-        self.assertEqual(int(time.time() * 1000), rts.add(4, '*', 1))
-        info = rts.info(5)
+        self.assertEqual(int(time.time() * 1000), rts.add(5, '*', 1))
+        info = rts.info(4)
         self.assertEqual(10, info.retention_msecs)
         self.assertEqual('Labs', info.labels['Redis'])
 
@@ -53,7 +55,7 @@ class RedisTimeSeriesTest(TestCase):
         rts.create('a')
         self.assertEqual([1, 2, 3], rts.madd([('a', 1, 5), ('a', 2, 10), ('a', 3, 15)]))
         res = rts.madd([('a', '*', 5), ('a', '*', 10), ('a', '*', 15)])
-        self.assertTrue(res[0] == res[2] or res[0] + 10 > res[2])
+        self.assertTrue(res[0] + 10 >= res[2])
 
     def testIncrbyDecrby(self):
         '''Test TS.INCRBY and TS.DECRBY calls'''
@@ -68,9 +70,9 @@ class RedisTimeSeriesTest(TestCase):
 
         #test with counter reset
         for _ in range(50):
-            self.assertTrue(rts.incrby(1,1,time_bucket=1))  
-            self.assertTrue(rts.decrby(2,1,time_bucket=1)) 
-        sleep(1.1)
+            self.assertTrue(rts.incrby(1,1,time_bucket=100))  
+            self.assertTrue(rts.decrby(2,1,time_bucket=100)) 
+        sleep(0.2)
         self.assertTrue(rts.incrby(1,1,time_bucket=1))  
         self.assertEqual(1, rts.get(1)[1])
         self.assertTrue(rts.decrby(2,1,time_bucket=1))  

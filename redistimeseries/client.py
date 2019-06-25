@@ -7,21 +7,23 @@ from redis._compat import (long, nativestr)
 from redis.exceptions import DataError
 
 class TSInfo(object):
-    chunk_count = None
-    labels = []
-    last_time_stamp = None
-    max_samples_per_chunk = None
-    retention_msecs = None
     rules = []
+    labels = []
+    sourceKey = None
+    chunk_count = None
+    last_time_stamp = None
+    retention_msecs = None
+    max_samples_per_chunk = None
 
     def __init__(self, args):
         response = dict(zip(map(nativestr, args[::2]), args[1::2]))
+        self.rules = response['rules']
+        self.sourceKey = response['sourceKey']
         self.chunkCount = response['chunkCount']
         self.labels = list_to_dict(response['labels'])
         self.lastTimeStamp = response['lastTimestamp']
-        self.maxSamplesPerChunk = response['maxSamplesPerChunk']
         self.retention_msecs = response['retentionTime']
-        self.rules = response['rules']
+        self.maxSamplesPerChunk = response['maxSamplesPerChunk']
 
 def list_to_dict(aList):
     return {nativestr(aList[i][0]):nativestr(aList[i][1])
@@ -60,7 +62,7 @@ class Client(Redis): #changed from StrictRedis
 
     MODULE_INFO = {
         'name': 'RedisTimeSeries',
-        'ver':  '0.1.0'
+        'ver':  '0.2.0'
     }
 
     CREATE_CMD = 'TS.CREATE'
