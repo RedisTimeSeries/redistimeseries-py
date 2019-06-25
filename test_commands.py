@@ -44,7 +44,7 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(3, rts.add(3, 3, 2, labels={'Redis':'Labs'}))
         self.assertEqual(4, rts.add(4, 4, 2, retention_msecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
         
-        self.assertEqual(int(time.time() * 1000), rts.add(5, '*', 1))
+        self.assertAlmostEqual(time.time(), float(rts.add(5, '*', 1)) / 1000, 2)
         info = rts.info(4)
         self.assertEqual(10, info.retention_msecs)
         self.assertEqual('Labs', info.labels['Redis'])
