@@ -43,8 +43,8 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(2, rts.add(2, 2, 3, retention_msecs=10))
         self.assertEqual(3, rts.add(3, 3, 2, labels={'Redis':'Labs'}))
         self.assertEqual(4, rts.add(4, 4, 2, retention_msecs=10, labels={'Redis':'Labs', 'Time':'Series'}))
+        
         self.assertAlmostEqual(time.time(), float(rts.add(5, '*', 1)) / 1000, 2)
-
         info = rts.info(4)
         self.assertEqual(10, info.retention_msecs)
         self.assertEqual('Labs', info.labels['Redis'])
@@ -73,9 +73,9 @@ class RedisTimeSeriesTest(TestCase):
             self.assertTrue(rts.incrby(1,1,time_bucket=100))  
             self.assertTrue(rts.decrby(2,1,time_bucket=100)) 
         sleep(0.2)
-        self.assertTrue(rts.incrby(1,1,time_bucket=1))  
+        self.assertEqual('1', rts.incrby(1,1,time_bucket=1)[1])  
         self.assertEqual(1, rts.get(1)[1])
-        self.assertTrue(rts.decrby(2,1,time_bucket=1))  
+        self.assertEqual('-1', rts.decrby(2,1,time_bucket=1)[1])  
         self.assertEqual(-1, rts.get(2)[1])
 
     def testCreateRule(self):

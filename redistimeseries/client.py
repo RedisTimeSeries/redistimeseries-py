@@ -92,8 +92,8 @@ class Client(Redis): #changed from StrictRedis
             self.ALTER_CMD : bool_ok, 
             #self.ADD_CMD : bool_ok,
             #self.MADD_CMD : bool_ok,
-            self.INCRBY_CMD : bool_ok,
-            self.DECRBY_CMD : bool_ok,
+            #self.INCRBY_CMD : bool_ok,
+            #self.DECRBY_CMD : bool_ok,
             self.CREATERULE_CMD : bool_ok,
             self.DELETERULE_CMD : bool_ok,
             self.RANGE_CMD : parse_range,
@@ -128,6 +128,11 @@ class Client(Redis): #changed from StrictRedis
                           bucket_size_msec):     
         params.append('AGGREGATION')
         params.extend([aggregation_type, bucket_size_msec])
+
+    @staticmethod
+    def appendTimestamp(params, timestamp):
+        if timestamp is not None:
+            params.extend(['TIMESTAMP', timestamp])
 
     def create(self, key, retention_msecs=None, labels={}):
         """
