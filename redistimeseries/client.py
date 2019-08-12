@@ -215,7 +215,7 @@ class Client(Redis): #changed from StrictRedis
         Creates a compaction rule from values added to ``source_key`` 
         into ``dest_key``. Aggregating for ``bucket_size_msec`` where an
         ``aggregation_type`` can be ['avg', 'sum', 'min', 'max',
-        'range', 'count', 'first', 'last']
+        'range', 'count', 'first', 'last', 'std.p', 'std.s', 'var.p', 'var.s']
         """
         params=[source_key, dest_key]
         self.appendAggregation(params, aggregation_type, bucket_size_msec)
@@ -232,7 +232,7 @@ class Client(Redis): #changed from StrictRedis
         Query a range from ``key``, from ``from_time`` to ``to_time``.
         Can Aggregate for ``bucket_size_msec`` where an ``aggregation_type``
         can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
-        'last']
+        'last', 'std.p', 'std.s', 'var.p', 'var.s']
         """
         params = [key, from_time, to_time]
         if aggregation_type != None:
@@ -247,7 +247,7 @@ class Client(Redis): #changed from StrictRedis
         ``filters`` are a list strings such as ['Test=This'].
         Can Aggregate for ``bucket_size_msec`` where an ``aggregation_type``
         can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
-        'last']
+        'last', 'std.p', 'std.s', 'var.p', 'var.s']
         """
         params = [from_time, to_time]
         if aggregation_type != None:
