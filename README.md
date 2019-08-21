@@ -31,7 +31,7 @@ rts.range('test', 0, -1, aggregationType='sum', bucket_size_msec=10)
 rts.info('test').__dict__
 
 # Example with rules
-rts.create('source', retentionSecs=40)
+rts.create('source', retention_msecs=40)
 rts.create('sumRule')
 rts.create('avgRule')
 rts.createrule('source', 'sumRule', 'sum', 20)
