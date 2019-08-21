@@ -26,8 +26,8 @@ rts.add('test', 2, 1.12)
 rts.get('test')                                  
 rts.incrby('test',1)                               
 rts.range('test', 0, -1)
-rts.range('test', 0, -1, aggregationType='avg', bucketSizeSeconds=10)
-rts.range('test', 0, -1, aggregationType='sum', bucketSizeSeconds=10)
+rts.range('test', 0, -1, aggregationType='avg', bucket_size_msec=10)
+rts.range('test', 0, -1, aggregationType='sum', bucket_size_msec=10)
 rts.info('test').__dict__
 
 # Example with rules
