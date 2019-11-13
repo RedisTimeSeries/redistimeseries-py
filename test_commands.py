@@ -84,13 +84,15 @@ class RedisTimeSeriesTest(TestCase):
         # test rule creation
         rts.create(1)
         rts.create(2)
-        rts.createrule(1, 2, 'avg', 1000)
+        rts.createrule(1, 2, 'avg', 100)
         for _ in range(50):
             rts.add(1, '*', 1)
             rts.add(1, '*', 2)
+        time.sleep(0.2)
+        rts.add(1, '*', 777)
         self.assertAlmostEqual(rts.get(2)[1], 1.5)
         info = rts.info(1)
-        self.assertEqual(info.rules[0][1], 1000)
+        self.assertEqual(info.rules[0][1], 100)
 
         # test rule deletion
         rts.deleterule(1, 2)
