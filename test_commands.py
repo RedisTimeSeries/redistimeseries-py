@@ -87,8 +87,9 @@ class RedisTimeSeriesTest(TestCase):
         rts.createrule(1, 2, 'avg', 100)
         for _ in range(50):
             rts.add(1, '*', 1)
+            time.sleep(0.002)
             rts.add(1, '*', 2)
-        time.sleep(0.2)
+            time.sleep(0.002)
         rts.add(1, '*', 777)
         self.assertAlmostEqual(rts.get(2)[1], 1.5)
         info = rts.info(1)
