@@ -55,8 +55,6 @@ class RedisTimeSeriesTest(TestCase):
         rts.create('a')
         self.assertEqual([1, 2, 3], rts.madd([('a', 1, 5), ('a', 2, 10), ('a', 3, 15)]))
 
-        self.assertRaises(rts.madd([('a', '*', 5), ('a', '*', 10), ('a', '*', 15)]))
-
     def testIncrbyDecrby(self):
         '''Test TS.INCRBY and TS.DECRBY calls'''
 
@@ -69,17 +67,6 @@ class RedisTimeSeriesTest(TestCase):
             self.assertTrue(rts.decrby(1,1))
             sleep(0.001)        
         self.assertEqual(0, rts.get(1)[1])
-
-        #test with counter reset
-        for _ in range(50):
-            self.assertTrue(rts.incrby(1,1,time_bucket=100))  
-            self.assertTrue(rts.decrby(2,1,time_bucket=100)) 
-            sleep(0.001)        
-        sleep(0.2)
-        self.assertTrue(rts.incrby(1,1,time_bucket=1))  
-        self.assertEqual(1, rts.get(1)[1])
-        self.assertTrue(rts.decrby(2,1,time_bucket=1))  
-        self.assertEqual(-1, rts.get(2)[1])
 
     def testCreateRule(self):
         '''Test TS.CREATERULE and TS.DELETERULE calls'''
