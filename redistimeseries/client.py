@@ -112,11 +112,6 @@ class Client(Redis): #changed from StrictRedis
             params.extend(['RETENTION', retention])
             
     @staticmethod
-    def appendTimeBucket(params, time_bucket):
-        if time_bucket is not None:
-            params.extend(['RESET', time_bucket])
-
-    @staticmethod
     def appendLabels(params, labels):
         if labels:
             params.append('LABELS')
@@ -188,7 +183,6 @@ class Client(Redis): #changed from StrictRedis
         applied. 
         """
         params = [key, value]
-        self.appendTimeBucket(params, time_bucket)
         self.appendRetention(params, retention_msecs)
         self.appendLabels(params, labels)
 
@@ -203,7 +197,6 @@ class Client(Redis): #changed from StrictRedis
         applied. 
         """
         params = [key, value]
-        self.appendTimeBucket(params, time_bucket)
         self.appendRetention(params, retention_msecs)
         self.appendLabels(params, labels)
         
