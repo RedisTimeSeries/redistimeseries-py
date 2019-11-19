@@ -58,7 +58,6 @@ class RedisTimeSeriesTest(TestCase):
     def testIncrbyDecrby(self):
         '''Test TS.INCRBY and TS.DECRBY calls'''
 
-        #test without counter reset
         for _ in range(100):
             self.assertTrue(rts.incrby(1,1))
             sleep(0.001)        
