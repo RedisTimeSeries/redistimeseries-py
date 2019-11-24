@@ -90,10 +90,6 @@ class Client(Redis): #changed from StrictRedis
         MODULE_CALLBACKS = {
             self.CREATE_CMD : bool_ok,
             self.ALTER_CMD : bool_ok, 
-            #self.ADD_CMD : bool_ok,
-            #self.MADD_CMD : bool_ok,
-            #self.INCRBY_CMD : bool_ok,
-            #self.DECRBY_CMD : bool_ok,
             self.CREATERULE_CMD : bool_ok,
             self.DELETERULE_CMD : bool_ok,
             self.RANGE_CMD : parse_range,
