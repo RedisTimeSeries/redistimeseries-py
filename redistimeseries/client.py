@@ -30,7 +30,7 @@ def list_to_dict(aList):
                 for i in range(len(aList))}
 
 def parse_range(response):
-    return [tuple((l[0], l[1].decode())) for l in response]
+    return [tuple((l[0], float(l[1]))) for l in response]
 
 def parse_m_range(response):
     res = []
@@ -43,7 +43,7 @@ def parse_m_get(response):
     res = []
     for item in response:
         res.append({ nativestr(item[0]) : [list_to_dict(item[1]), 
-                                item[2], nativestr(item[3])]})
+                                item[2], float(item[3])]})
     return res
     
 def parseToList(response):
