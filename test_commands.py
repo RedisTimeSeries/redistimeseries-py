@@ -128,7 +128,6 @@ class RedisTimeSeriesTest(TestCase):
         rts.add(1, '*', 15)
         rts.add(2, '*', 25)
         res = rts.mget(['Test=This'])
-        print res
         self.assertEqual(15, res[0]['1'][2])
         self.assertEqual(25, res[1]['2'][2])
         res = rts.mget(['Taste=That'])
