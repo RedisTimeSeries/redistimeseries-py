@@ -35,7 +35,8 @@ class RedisTimeSeriesTest(TestCase):
         rts.alter(1, labels={'Time':'Series'})
         self.assertEqual('Series', rts.info(1).labels['Time'])
         self.assertEqual(10, rts.info(1).retention_msecs)
-
+        pipe = rts.pipeline()
+        self.assertTrue(pipe.create(2))
     def testAdd(self):
         '''Test TS.ADD calls'''
 
@@ -141,11 +142,25 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(info.labels['currentLabel'], 'currentData')
 
     def testQueryIndex(self):
+        '''Test TS.QUERYINDEX calls'''
         rts.create(1, labels={'Test':'This'})
         rts.create(2, labels={'Test':'This', 'Taste':'That'})
         self.assertEqual(2, len(rts.queryindex(['Test=This'])))       
         self.assertEqual(1, len(rts.queryindex(['Taste=That'])))       
         self.assertEqual(['2'], rts.queryindex(['Taste=That']))       
+
+    def testPipeline(self):
+        '''Test pipeline'''
+        pipeline = rts.pipeline()
+        pipeline.create('with_pipeline')
+        for i in range(100):
+            pipeline.add('with_pipeline', i, 1.1 * i)
+        pipeline.execute()
+        
+        info = rts.info('with_pipeline')
+        self.assertEqual(info.lastTimeStamp, 99)
+        self.assertEqual(info.total_samples, 100)
+        self.assertEqual(rts.get('with_pipeline')[1], 99 * 1.1)
 
 if __name__ == '__main__':
     unittest.main()

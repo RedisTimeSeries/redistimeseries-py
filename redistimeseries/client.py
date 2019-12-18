@@ -1,6 +1,7 @@
 import six
 import redis
-from redis import Redis, RedisError 
+from redis import Redis, RedisError
+from redis.client import Pipeline
 from redis.client import bool_ok
 from redis.client import int_or_none
 from redis._compat import (long, nativestr)
@@ -11,8 +12,11 @@ class TSInfo(object):
     labels = []
     sourceKey = None
     chunk_count = None
-    last_time_stamp = None
+    memory_usage = None
+    total_samples = None
     retention_msecs = None
+    last_time_stamp = None
+    first_time_stamp = None
     max_samples_per_chunk = None
 
     def __init__(self, args):
@@ -20,9 +24,12 @@ class TSInfo(object):
         self.rules = response['rules']
         self.sourceKey = response['sourceKey']
         self.chunkCount = response['chunkCount']
+        self.memory_usage = response['memoryUsage']
+        self.total_samples = response['totalSamples']
         self.labels = list_to_dict(response['labels'])
-        self.lastTimeStamp = response['lastTimestamp']
         self.retention_msecs = response['retentionTime']
+        self.lastTimeStamp = response['lastTimestamp']
+        self.first_time_stamp = response['firstTimestamp']
         self.maxSamplesPerChunk = response['maxSamplesPerChunk']
 
 def list_to_dict(aList):
@@ -262,3 +269,22 @@ class Client(Redis): #changed from StrictRedis
     def queryindex(self, filters):
         """Get all the keys matching the ``filter`` list."""
         return self.execute_command(self.QUERYINDEX_CMD, *filters)
+
+    def pipeline(self, transaction=True, shard_hint=None):
+        """
+        Return a new pipeline object that can queue multiple commands for
+        later execution. ``transaction`` indicates whether all commands
+        should be executed atomically. Apart from making a group of operations
+        atomic, pipelines are useful for reducing the back-and-forth overhead
+        between the client and server.
+        Overridden in order to provide the right client through the pipeline.
+        """
+        p = Pipeline(
+            connection_pool=self.connection_pool,
+            response_callbacks=self.response_callbacks,
+            transaction=transaction,
+            shard_hint=shard_hint)
+        return p
+
+class Pipeline(Pipeline, Client):
+    "Pipeline for ReJSONClient"
