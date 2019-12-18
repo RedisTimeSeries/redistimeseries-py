@@ -287,4 +287,4 @@ class Client(Redis): #changed from StrictRedis
         return p
 
 class Pipeline(Pipeline, Client):
-    "Pipeline for ReJSONClient"
+    "Pipeline for Redis TimeSeries Client"
