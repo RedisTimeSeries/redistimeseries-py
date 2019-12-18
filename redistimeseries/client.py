@@ -1,11 +1,8 @@
 import six
-import redis
-from redis import Redis, RedisError
+from redis import Redis
 from redis.client import Pipeline
 from redis.client import bool_ok
-from redis.client import int_or_none
-from redis._compat import (long, nativestr)
-from redis.exceptions import DataError
+from redis._compat import nativestr
 
 class TSInfo(object):
     rules = []
