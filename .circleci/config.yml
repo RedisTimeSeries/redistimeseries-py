@@ -18,7 +18,6 @@ commands:
               circleci step halt
             fi
 
-version: 2
 jobs:
   build:
     docker:
