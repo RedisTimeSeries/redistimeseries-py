@@ -1,4 +1,3 @@
-import six
 from redis import Redis
 from redis.client import Pipeline
 from redis.client import bool_ok
@@ -103,8 +102,8 @@ class Client(Redis): #changed from StrictRedis
             self.INFO_CMD : TSInfo,
             self.QUERYINDEX_CMD : parseToList,
         }
-        for k, v in six.iteritems(MODULE_CALLBACKS):
-            self.set_response_callback(k, v)
+        for k in MODULE_CALLBACKS:
+            self.set_response_callback(k, MODULE_CALLBACKS[k])
 
     @staticmethod
     def appendRetention(params, retention):
