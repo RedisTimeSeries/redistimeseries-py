@@ -233,7 +233,7 @@ class Client(Redis): #changed from StrictRedis
         return self.execute_command(self.RANGE_CMD, *params)
 
     def mrange(self, from_time, to_time, filters,
-                     aggregation_type=None, bucket_size_msec=0):
+                     aggregation_type=None, bucket_size_msec=0, with_labels=False):
         """
         Query a range based on filters,retention_msecs from ``from_time`` to ``to_time``.
         ``filters`` are a list strings such as ['Test=This'].
@@ -244,6 +244,9 @@ class Client(Redis): #changed from StrictRedis
         params = [from_time, to_time]
         if aggregation_type != None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
+        if with_labels:
+            params.extend(['WITHLABELS'])
+            
         params.extend(['FILTER'])
         params += filters
         return self.execute_command(self.MRANGE_CMD, *params)

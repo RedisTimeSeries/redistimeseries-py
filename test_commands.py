@@ -105,14 +105,21 @@ class RedisTimeSeriesTest(TestCase):
 
         rts.create(1, labels={'Test':'This'})
         rts.create(2, labels={'Test':'This', 'Taste':'That'})
+        
         for i in range(100):
             rts.add(1, i, i % 7)
-            rts.add(2, i, i % 11)
-        self.assertTrue(100, len(rts.mrange(0, 200, filters=['Test=This'])))
+            rts.add(2, i, i % 11)        
+        mrange_res1 = rts.mrange(0, 200, filters=['Test=This'])
+        self.assertTrue(100, len(mrange_res1))
+        self.assertDictEqual({}, mrange_res1[0]['1'][0])
+        
         for i in range(100):
             rts.add(1, i+200, i % 7)
-        self.assertTrue(20, len(rts.mrange(0, 500, filters=['Test=This'],
-                        aggregation_type='avg', bucket_size_msec=10)))
+        mrange_res2 = rts.mrange(0, 500, filters=['Test=This'],
+                        aggregation_type='avg', bucket_size_msec=10, with_labels=True);
+        self.assertTrue(20, len(mrange_res2))
+        self.assertDictEqual({'Test':'This'}, mrange_res2[0]['1'][0])
+        
 
     def testGet(self):
         '''Test TS.GET calls'''
