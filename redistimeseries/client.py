@@ -234,13 +234,13 @@ class Client(Redis): #changed from StrictRedis
         """
         params = [key, from_time, to_time]
         self.appendCount(params, count)
-        if aggregation_type != None:
+        if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
 
         return self.execute_command(self.RANGE_CMD, *params)
 
     def mrange(self, from_time, to_time, filters, count=None,
-                     aggregation_type=None, bucket_size_msec=0, with_labels=None):
+                     aggregation_type=None, bucket_size_msec=0, with_labels=False):
         """
         Query a range based on filters,retention_msecs from ``from_time`` to ``to_time``.
         ``count`` limits the number of results.
@@ -252,9 +252,9 @@ class Client(Redis): #changed from StrictRedis
         """
         params = [from_time, to_time]
         self.appendCount(params, count)
-        if aggregation_type != None:
+        if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
-        if with_labels is not None:
+        if with_labels:
             params.extend(['WITHLABELS'])
         params.extend(['FILTER'])
         params += filters
