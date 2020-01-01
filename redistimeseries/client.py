@@ -109,17 +109,22 @@ class Client(Redis): #changed from StrictRedis
     def appendRetention(params, retention):
         if retention is not None:
             params.extend(['RETENTION', retention])
-            
+
     @staticmethod
     def appendLabels(params, labels):
         if labels:
             params.append('LABELS')
             for k, v in labels.items():
                 params.extend([k,v])
+            
+    @staticmethod
+    def appendCount(params, count):
+        if count is not None:
+            params.extend(['COUNT', count])
 
     @staticmethod
     def appendAggregation(params, aggregation_type, 
-                          bucket_size_msec):     
+                          bucket_size_msec):  
         params.append('AGGREGATION')
         params.extend([aggregation_type, bucket_size_msec])
 
@@ -218,32 +223,39 @@ class Client(Redis): #changed from StrictRedis
         """Deletes a compaction rule"""
         return self.execute_command(self.DELETERULE_CMD, source_key, dest_key)
    
-    def range(self, key, from_time, to_time, 
+    def range(self, key, from_time, to_time, count=None,
                 aggregation_type=None, bucket_size_msec=0):
         """
         Query a range from ``key``, from ``from_time`` to ``to_time``.
+        ``count`` limits the number of results.
         Can Aggregate for ``bucket_size_msec`` where an ``aggregation_type``
         can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
         'last', 'std.p', 'std.s', 'var.p', 'var.s']
         """
         params = [key, from_time, to_time]
+        self.appendCount(params, count)
         if aggregation_type != None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
 
         return self.execute_command(self.RANGE_CMD, *params)
 
-    def mrange(self, from_time, to_time, filters,
-                     aggregation_type=None, bucket_size_msec=0):
+    def mrange(self, from_time, to_time, filters, count=None,
+                     aggregation_type=None, bucket_size_msec=0, with_labels=None):
         """
         Query a range based on filters,retention_msecs from ``from_time`` to ``to_time``.
+        ``count`` limits the number of results.
         ``filters`` are a list strings such as ['Test=This'].
         Can Aggregate for ``bucket_size_msec`` where an ``aggregation_type``
         can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
         'last', 'std.p', 'std.s', 'var.p', 'var.s']
+        ``WITHLABELS`` appends labels to results.
         """
         params = [from_time, to_time]
+        self.appendCount(params, count)
         if aggregation_type != None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
+        if with_labels is not None:
+            params.extend(['WITHLABELS'])
         params.extend(['FILTER'])
         params += filters
         return self.execute_command(self.MRANGE_CMD, *params)
