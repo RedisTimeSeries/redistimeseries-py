@@ -113,6 +113,7 @@ class RedisTimeSeriesTest(TestCase):
             rts.add(2, i, i % 11)
                 
         res = rts.mrange(0, 200, filters=['Test=This'])
+        self.assertEqual(2, len(res))
         self.assertEqual(100, len(res[0]['1'][1]))
         
         res = rts.mrange(0, 200, filters=['Test=This'], count=10)
@@ -122,6 +123,7 @@ class RedisTimeSeriesTest(TestCase):
             rts.add(1, i+200, i % 7)
         res = rts.mrange(0, 500, filters=['Test=This'],
                         aggregation_type='avg', bucket_size_msec=10)
+        self.assertEqual(2, len(res))
         self.assertEqual(19, len(res[0]['1'][1]))
         
         #test withlabels
@@ -153,7 +155,7 @@ class RedisTimeSeriesTest(TestCase):
         '''Test TS.INFO calls'''
         rts.create(1, retention_msecs=5, labels={'currentLabel' : 'currentData'})
         info = rts.info(1)
-        self.assertTrue(info.retention_msecs == 5)
+        self.assertEqual(5, info.retention_msecs)
         self.assertEqual(info.labels['currentLabel'], 'currentData')
 
     def testQueryIndex(self):
