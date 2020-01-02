@@ -105,6 +105,12 @@ class Client(Redis): #changed from StrictRedis
         for k in MODULE_CALLBACKS:
             self.set_response_callback(k, MODULE_CALLBACKS[k])
 
+
+    @staticmethod
+    def appendUncompressed(params, uncompressed):
+        if uncompressed:
+            params.extend(['UNCOMPRESSED'])
+
     @staticmethod
     def appendRetention(params, retention):
         if retention is not None:
@@ -123,13 +129,14 @@ class Client(Redis): #changed from StrictRedis
         params.append('AGGREGATION')
         params.extend([aggregation_type, bucket_size_msec])
 
-    def create(self, key, retention_msecs=None, labels={}):
+    def create(self, key, retention_msecs=None, uncompressed=False, labels={}):
         """
         Creates a new time-series ``key`` with ``retention_msecs`` in 
         milliseconds and ``labels``.
         """
         params = [key]
         self.appendRetention(params, retention_msecs)
+        self.appendUncompressed(params, uncompressed)
         self.appendLabels(params, labels)
 
         return self.execute_command(self.CREATE_CMD, *params)
@@ -145,8 +152,8 @@ class Client(Redis): #changed from StrictRedis
 
         return self.execute_command(self.ALTER_CMD, *params)
 
-    def add(self, key, timestamp, value, 
-              retention_msecs=None, labels={}):
+    def add(self, key, timestamp, value, retention_msecs=None, 
+                        uncompressed=False, labels={}):
         """
         Appends (or creates and appends) a new ``value`` to series 
         ``key`` with ``timestamp``. If ``key`` is created, 
@@ -155,6 +162,7 @@ class Client(Redis): #changed from StrictRedis
         """
         params = [key, timestamp, value]
         self.appendRetention(params, retention_msecs)
+        self.appendUncompressed(params, uncompressed)
         self.appendLabels(params, labels)
 
         return self.execute_command(self.ADD_CMD, *params)
@@ -173,8 +181,8 @@ class Client(Redis): #changed from StrictRedis
 
         return self.execute_command(self.MADD_CMD, *params)
 
-    def incrby(self, key, value, time_bucket=None,
-                     retention_msecs=None, labels={}): 
+    def incrby(self, key, value, time_bucket=None, retention_msecs=None,
+                        uncompressed=False, labels={}): 
         """
         Increases latest value in ``key`` by ``value``.
         ``timeBucket`` resets counter. In milliseconds.
@@ -183,12 +191,13 @@ class Client(Redis): #changed from StrictRedis
         """
         params = [key, value]
         self.appendRetention(params, retention_msecs)
+        self.appendUncompressed(params, uncompressed)
         self.appendLabels(params, labels)
 
         return self.execute_command(self.INCRBY_CMD, *params)
 
-    def decrby(self, key, value, time_bucket=None,
-                     retention_msecs=None, labels={}):  
+    def decrby(self, key, value, time_bucket=None, retention_msecs=None,
+                        uncompressed=False, labels={}):  
         """
         Decreases latest value in ``key`` by ``value``.
         ``time_bucket`` resets counter. In milliseconds.
@@ -197,6 +206,7 @@ class Client(Redis): #changed from StrictRedis
         """
         params = [key, value]
         self.appendRetention(params, retention_msecs)
+        self.appendUncompressed(params, uncompressed)
         self.appendLabels(params, labels)
         
         return self.execute_command(self.DECRBY_CMD, *params)
