@@ -37,6 +37,7 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(10, rts.info(1).retention_msecs)
         pipe = rts.pipeline()
         self.assertTrue(pipe.create(2))
+
     def testAdd(self):
         '''Test TS.ADD calls'''
 
@@ -94,11 +95,13 @@ class RedisTimeSeriesTest(TestCase):
 
         for i in range(100):
             rts.add(1, i, i % 7)
-        self.assertTrue(100, len(rts.range(1, 0, 200)))
+        self.assertEqual(100, len(rts.range(1, 0, 200)))
         for i in range(100):
             rts.add(1, i+200, i % 7)
-        self.assertTrue(200, len(rts.range(1, 0, 500)))
-        self.assertTrue(20, len(rts.range(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
+        self.assertEqual(200, len(rts.range(1, 0, 500)))
+        #last sample isn't returned
+        self.assertEqual(19, len(rts.range(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
+        self.assertEqual(10, len(rts.range(1, 0, 500, count=10)))
 
     def testMultiRange(self):
         '''Test TS.MRANGE calls which returns range by filter'''
@@ -108,11 +111,25 @@ class RedisTimeSeriesTest(TestCase):
         for i in range(100):
             rts.add(1, i, i % 7)
             rts.add(2, i, i % 11)
-        self.assertTrue(100, len(rts.mrange(0, 200, filters=['Test=This'])))
+                
+        res = rts.mrange(0, 200, filters=['Test=This'])
+        self.assertEqual(2, len(res))
+        self.assertEqual(100, len(res[0]['1'][1]))
+        
+        res = rts.mrange(0, 200, filters=['Test=This'], count=10)
+        self.assertEqual(10, len(res[0]['1'][1]))
+
         for i in range(100):
             rts.add(1, i+200, i % 7)
-        self.assertTrue(20, len(rts.mrange(0, 500, filters=['Test=This'],
-                        aggregation_type='avg', bucket_size_msec=10)))
+        res = rts.mrange(0, 500, filters=['Test=This'],
+                        aggregation_type='avg', bucket_size_msec=10)
+        self.assertEqual(2, len(res))
+        self.assertEqual(19, len(res[0]['1'][1]))
+        
+        #test withlabels
+        self.assertEqual({}, res[0]['1'][0])
+        res = rts.mrange(0, 200, filters=['Test=This'], with_labels=True)
+        self.assertEqual({'Test': 'This'}, res[0]['1'][0])
 
     def testGet(self):
         '''Test TS.GET calls'''
@@ -138,7 +155,7 @@ class RedisTimeSeriesTest(TestCase):
         '''Test TS.INFO calls'''
         rts.create(1, retention_msecs=5, labels={'currentLabel' : 'currentData'})
         info = rts.info(1)
-        self.assertTrue(info.retention_msecs == 5)
+        self.assertEqual(5, info.retention_msecs)
         self.assertEqual(info.labels['currentLabel'], 'currentData')
 
     def testQueryIndex(self):

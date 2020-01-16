@@ -5,11 +5,11 @@ def read_all(f):
     with io.open(f, encoding="utf-8") as I:
         return I.read()
 
-requirements = map(str.strip, open("requirements.txt").readlines())
+requirements = list(map(str.strip, open("requirements.txt").readlines()))
 
 setup(
     name='redistimeseries',
-    version='0.6.1',
+    version='0.7.0',
     description='RedisTimeSeries Python Client',
     long_description=read_all("README.md"),
     long_description_content_type='text/markdown',
