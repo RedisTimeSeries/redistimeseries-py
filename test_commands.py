@@ -179,5 +179,13 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(info.total_samples, 100)
         self.assertEqual(rts.get('with_pipeline')[1], 99 * 1.1)
 
+    def testUncompressed(self):
+        '''Test uncompressed chunks'''
+        rts.create('compressed')
+        rts.create('uncompressed', uncompressed=True)
+        compressed_info = rts.info('compressed')
+        uncompressed_info = rts.info('uncompressed')
+        self.assertNotEqual(compressed_info.memory_usage, uncompressed_info.memory_usage)
+
 if __name__ == '__main__':
     unittest.main()
