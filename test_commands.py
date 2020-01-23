@@ -62,11 +62,11 @@ class RedisTimeSeriesTest(TestCase):
 
         for _ in range(100):
             self.assertTrue(rts.incrby(1,1))
-            sleep(0.001)        
+            sleep(0.001)
         self.assertEqual(100, rts.get(1)[1])
         for _ in range(100):
             self.assertTrue(rts.decrby(1,1))
-            sleep(0.001)        
+            sleep(0.001)
         self.assertEqual(0, rts.get(1)[1])
 
     def testCreateRule(self):
@@ -100,7 +100,7 @@ class RedisTimeSeriesTest(TestCase):
             rts.add(1, i+200, i % 7)
         self.assertEqual(200, len(rts.range(1, 0, 500)))
         #last sample isn't returned
-        self.assertEqual(19, len(rts.range(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
+        self.assertEqual(20, len(rts.range(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
         self.assertEqual(10, len(rts.range(1, 0, 500, count=10)))
 
     def testMultiRange(self):
@@ -124,7 +124,7 @@ class RedisTimeSeriesTest(TestCase):
         res = rts.mrange(0, 500, filters=['Test=This'],
                         aggregation_type='avg', bucket_size_msec=10)
         self.assertEqual(2, len(res))
-        self.assertEqual(19, len(res[0]['1'][1]))
+        self.assertEqual(20, len(res[0]['1'][1]))
         
         #test withlabels
         self.assertEqual({}, res[0]['1'][0])
@@ -137,7 +137,7 @@ class RedisTimeSeriesTest(TestCase):
         rts.add(1, 2, 3)
         self.assertEqual(2, rts.get(1)[0])
         rts.add(1, 3, 4)
-        self.assertEqual(4, rts.get(1)[1])    
+        self.assertEqual(4, rts.get(1)[1])
 
     def testMGet(self):
         '''Test TS.MGET calls'''
@@ -162,9 +162,9 @@ class RedisTimeSeriesTest(TestCase):
         '''Test TS.QUERYINDEX calls'''
         rts.create(1, labels={'Test':'This'})
         rts.create(2, labels={'Test':'This', 'Taste':'That'})
-        self.assertEqual(2, len(rts.queryindex(['Test=This'])))       
-        self.assertEqual(1, len(rts.queryindex(['Taste=That'])))       
-        self.assertEqual(['2'], rts.queryindex(['Taste=That']))       
+        self.assertEqual(2, len(rts.queryindex(['Test=This'])))
+        self.assertEqual(1, len(rts.queryindex(['Taste=That'])))
+        self.assertEqual(['2'], rts.queryindex(['Taste=That']))
 
     def testPipeline(self):
         '''Test pipeline'''
