@@ -105,11 +105,15 @@ class Client(Redis): #changed from StrictRedis
         for k in MODULE_CALLBACKS:
             self.set_response_callback(k, MODULE_CALLBACKS[k])
 
-
     @staticmethod
     def appendUncompressed(params, uncompressed):
         if uncompressed:
             params.extend(['UNCOMPRESSED'])
+
+    @staticmethod
+    def appendWithLabels(params, with_labels):
+        if with_labels:
+            params.extend(['WITHLABELS'])
 
     @staticmethod
     def appendRetention(params, retention):
@@ -264,8 +268,7 @@ class Client(Redis): #changed from StrictRedis
         self.appendCount(params, count)
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
-        if with_labels:
-            params.extend(['WITHLABELS'])
+        self.appendWithLabels(params, with_labels)
         params.extend(['FILTER'])
         params += filters
         return self.execute_command(self.MRANGE_CMD, *params)
@@ -276,9 +279,8 @@ class Client(Redis): #changed from StrictRedis
 
     def mget(self, filters, with_labels=False):
         """Get the last samples matching the specific ``filter``."""
-        params = []
-        if with_labels:
-            params.extend(['WITHLABELS'])
+        params = []        
+        self.appendWithLabels(params, with_labels)
         params.extend(['FILTER'])
         params += filters
         return self.execute_command(self.MGET_CMD, *params)
