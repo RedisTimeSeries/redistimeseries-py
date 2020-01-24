@@ -46,7 +46,7 @@ def parse_m_get(response):
     res = []
     for item in response:
         res.append({ nativestr(item[0]) : [list_to_dict(item[1]), 
-                                item[2], float(item[3])]})
+                                item[2][0], float(item[2][1])]})
     return res
     
 def parseToList(response):
@@ -274,9 +274,12 @@ class Client(Redis): #changed from StrictRedis
         """Gets the last sample of ``key``"""
         return self.execute_command(self.GET_CMD, key)
 
-    def mget(self, filters):
+    def mget(self, filters, with_labels=False):
         """Get the last samples matching the specific ``filter``."""
-        params = ['FILTER']
+        params = []
+        if with_labels:
+            params.extend(['WITHLABELS'])
+        params.extend(['FILTER'])
         params += filters
         return self.execute_command(self.MGET_CMD, *params)
    
