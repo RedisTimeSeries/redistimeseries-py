@@ -151,6 +151,11 @@ class RedisTimeSeriesTest(TestCase):
         res = rts.mget(['Taste=That'])
         self.assertEqual(25, res[0]['2'][2])
 
+        # test with_labels
+        self.assertEqual({}, res[0]['2'][0])
+        res = rts.mget(['Taste=That'], with_labels=True)
+        self.assertEqual({'Taste': 'That', 'Test': 'This'}, res[0]['2'][0])
+
     def testInfo(self):
         '''Test TS.INFO calls'''
         rts.create(1, retention_msecs=5, labels={'currentLabel' : 'currentData'})
