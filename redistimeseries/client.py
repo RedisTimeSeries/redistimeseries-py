@@ -63,11 +63,6 @@ class Client(Redis): #changed from StrictRedis
     it's functionality.
     """
 
-    MODULE_INFO = {
-        'name': 'RedisTimeSeries',
-        'ver':  '0.2.0'
-    }
-
     CREATE_CMD = 'TS.CREATE'
     ALTER_CMD = 'TS.ALTER'
     ADD_CMD = 'TS.ADD'
