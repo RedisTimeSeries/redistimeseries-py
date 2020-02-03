@@ -194,7 +194,7 @@ class Client(Redis): #changed from StrictRedis
                 uncompressed=False, labels={}):
         """
         Increases latest value in ``key`` by ``value``.
-        ``timestamp` can be set or system time will be used.
+        ``timestamp`` can be set or system time will be used.
         If ``key`` is created, ``retention_msecs`` and ``labels`` are
         applied. 
         """
