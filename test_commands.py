@@ -141,15 +141,21 @@ class RedisTimeSeriesTest(TestCase):
     def testGet(self):
         '''Test TS.GET calls'''
 
-        rts.add(1, 2, 3)
-        self.assertEqual(2, rts.get(1)[0])
-        rts.add(1, 3, 4)
-        self.assertEqual(4, rts.get(1)[1])
+        name = 'test'
+        rts.create(name)
+        self.assertEqual((None, None), rts.get(name))
+        rts.add(name, 2, 3)
+        self.assertEqual(2, rts.get(name)[0])
+        rts.add(name, 3, 4)
+        self.assertEqual(4, rts.get(name)[1])
 
     def testMGet(self):
         '''Test TS.MGET calls'''
         rts.create(1, labels={'Test':'This'})
         rts.create(2, labels={'Test':'This', 'Taste':'That'})
+        act_res = rts.mget(['Test=This'])
+        exp_res = [{'1': [{}, None, None]}, {'2': [{}, None, None]}]
+        self.assertEqual(act_res, exp_res)
         rts.add(1, '*', 15)
         rts.add(2, '*', 25)
         res = rts.mget(['Test=This'])
