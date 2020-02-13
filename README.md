@@ -3,6 +3,7 @@
 [![CircleCI](https://circleci.com/gh/RedisTimeSeries/redistimeseries-py/tree/master.svg?style=svg)](https://circleci.com/gh/RedisTimeSeries/redistimeseries-py/tree/master)
 [![GitHub issues](https://img.shields.io/github/release/RedisTimeSeries/redistimeseries-py.svg)](https://github.com/RedisTimeSeries/redistimeseries-py/releases/latest)
 [![Codecov](https://codecov.io/gh/RedisTimeSeries/redistimeseries-py/branch/master/graph/badge.svg)](https://codecov.io/gh/RedisTimeSeries/redistimeseries-py)
+[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/RedisTimeSeries/redistimeseries-py.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/RedisTimeSeries/redistimeseries-py/context:python)
 
 redistimeseries-py is a package that gives developers easy access to RedisTimeSeries module. The package extends [redis-py](https://github.com/andymccurdy/redis-py)'s interface with RedisTimeSeries's API.  
 
