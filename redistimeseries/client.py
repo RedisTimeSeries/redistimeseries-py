@@ -50,7 +50,7 @@ def parse_get(response):
 def parse_m_get(response):
     res = []
     for item in response:
-        if len(item[2]) is 2:
+        if len(item[2]) == 2:
             res.append({ nativestr(item[0]) : [list_to_dict(item[1]),
                                 int(item[2][0]), float(item[2][1])]})
         else:
