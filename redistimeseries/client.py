@@ -42,11 +42,20 @@ def parse_m_range(response):
                                 parse_range(item[2])]})
     return res
 
+def parse_get(response):
+    if response == []:
+        return None
+    return (int(response[0]), float(response[1]))
+
 def parse_m_get(response):
     res = []
     for item in response:
-        res.append({ nativestr(item[0]) : [list_to_dict(item[1]),
-                                item[2][0], float(item[2][1])]})
+        if item[2] == []:
+            res.append({ nativestr(item[0]) : [list_to_dict(item[1]), None, None]})
+        else:
+            res.append({ nativestr(item[0]) : [list_to_dict(item[1]),
+                                int(item[2][0]), float(item[2][1])]})
+
     return res
 
 def parseToList(response):
@@ -92,7 +101,7 @@ class Client(Redis): #changed from StrictRedis
             self.DELETERULE_CMD : bool_ok,
             self.RANGE_CMD : parse_range,
             self.MRANGE_CMD : parse_m_range,
-            self.GET_CMD : lambda x: (int(x[0]), float(x[1])),
+            self.GET_CMD : parse_get,
             self.MGET_CMD : parse_m_get,
             self.INFO_CMD : TSInfo,
             self.QUERYINDEX_CMD : parseToList,
