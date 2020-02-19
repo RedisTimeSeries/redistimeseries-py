@@ -43,14 +43,14 @@ def parse_m_range(response):
     return res
 
 def parse_get(response):
-    if response[0] is None:
-        return (None, None)
+    if response == []:
+        return None
     return (int(response[0]), float(response[1]))
 
 def parse_m_get(response):
     res = []
     for item in response:
-        if item[2][0] is None:
+        if item[2] == []:
             res.append({ nativestr(item[0]) : [list_to_dict(item[1]), None, None]})
         else:
             res.append({ nativestr(item[0]) : [list_to_dict(item[1]),

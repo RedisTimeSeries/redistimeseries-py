@@ -143,7 +143,7 @@ class RedisTimeSeriesTest(TestCase):
 
         name = 'test'
         rts.create(name)
-        self.assertEqual((None, None), rts.get(name))
+        self.assertEqual(None, rts.get(name))
         rts.add(name, 2, 3)
         self.assertEqual(2, rts.get(name)[0])
         rts.add(name, 3, 4)
