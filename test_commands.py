@@ -154,20 +154,20 @@ class RedisTimeSeriesTest(TestCase):
         rts.create(1, labels={'Test':'This'})
         rts.create(2, labels={'Test':'This', 'Taste':'That'})
         act_res = rts.mget(['Test=This'])
-        exp_res = [{'1': [{}, None, None]}, {'2': [{}, None, None]}]
+        exp_res = {'1': ({}, None, None), '2': ({}, None, None)}
         self.assertEqual(act_res, exp_res)
         rts.add(1, '*', 15)
         rts.add(2, '*', 25)
         res = rts.mget(['Test=This'])
-        self.assertEqual(15, res[0]['1'][2])
-        self.assertEqual(25, res[1]['2'][2])
+        self.assertEqual(15, res['1'][2])
+        self.assertEqual(25, res['2'][2])
         res = rts.mget(['Taste=That'])
-        self.assertEqual(25, res[0]['2'][2])
+        self.assertEqual(25, res['2'][2])
 
         # test with_labels
-        self.assertEqual({}, res[0]['2'][0])
+        self.assertEqual({}, res['2'][0])
         res = rts.mget(['Taste=That'], with_labels=True)
-        self.assertEqual({'Taste': 'That', 'Test': 'This'}, res[0]['2'][0])
+        self.assertEqual({'Taste': 'That', 'Test': 'This'}, res['2'][0])
 
     def testInfo(self):
         '''Test TS.INFO calls'''
