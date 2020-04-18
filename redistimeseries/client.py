@@ -24,7 +24,7 @@ class TSInfo(object):
         self.total_samples = response['totalSamples']
         self.labels = list_to_dict(response['labels'])
         self.retention_msecs = response['retentionTime']
-        self.lastTimeStamp = response['lastTimestamp']
+        self.last_time_stamp = response['lastTimestamp']
         self.first_time_stamp = response['firstTimestamp']
         self.maxSamplesPerChunk = response['maxSamplesPerChunk']
 
