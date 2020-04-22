@@ -193,7 +193,7 @@ class RedisTimeSeriesTest(TestCase):
         pipeline.execute()
         
         info = rts.info('with_pipeline')
-        self.assertEqual(info.lastTimeStamp, 99)
+        self.assertEqual(info.last_time_stamp, 99)
         self.assertEqual(info.total_samples, 100)
         self.assertEqual(rts.get('with_pipeline')[1], 99 * 1.1)
 

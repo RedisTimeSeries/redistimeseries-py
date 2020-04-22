@@ -6,7 +6,7 @@ from redis._compat import nativestr
 class TSInfo(object):
     rules = []
     labels = []
-    sourceKey = None
+    source_key = None
     chunk_count = None
     memory_usage = None
     total_samples = None
@@ -18,15 +18,15 @@ class TSInfo(object):
     def __init__(self, args):
         response = dict(zip(map(nativestr, args[::2]), args[1::2]))
         self.rules = response['rules']
-        self.sourceKey = response['sourceKey']
-        self.chunkCount = response['chunkCount']
+        self.source_key = response['sourceKey']
+        self.chunk_count = response['chunkCount']
         self.memory_usage = response['memoryUsage']
         self.total_samples = response['totalSamples']
         self.labels = list_to_dict(response['labels'])
         self.retention_msecs = response['retentionTime']
-        self.lastTimeStamp = response['lastTimestamp']
+        self.last_time_stamp = response['lastTimestamp']
         self.first_time_stamp = response['firstTimestamp']
-        self.maxSamplesPerChunk = response['maxSamplesPerChunk']
+        self.max_samples_per_chunk = response['maxSamplesPerChunk']
 
 def list_to_dict(aList):
     return {nativestr(aList[i][0]):nativestr(aList[i][1])
