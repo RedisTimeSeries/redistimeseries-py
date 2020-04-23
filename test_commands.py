@@ -205,7 +205,7 @@ class RedisTimeSeriesTest(TestCase):
         uncompressed_info = rts.info('uncompressed')
         self.assertNotEqual(compressed_info.memory_usage, uncompressed_info.memory_usage)
 
-    def testUncompressed(self):
+    def testInfo(self):
         rts.create('info_series', retention_msecs=3600000, labels={'Test':'This', 'Taste':'That'})
         rts.create('avg_series', retention_msecs=3600000, labels={'Something':'Else'})
         rts.createrule('info_series','avg_series', 'AVG', 20)
