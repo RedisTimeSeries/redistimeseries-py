@@ -15,9 +15,16 @@ class TSInfo(object):
     first_time_stamp = None
     max_samples_per_chunk = None
 
+    def parse_rules(self, rules):
+        if rules != []:
+            for rule in rules:
+                rule[0] = nativestr(rule[0])
+                rule[2] = nativestr(rule[2])
+        return rules
+
     def __init__(self, args):
         response = dict(zip(map(nativestr, args[::2]), args[1::2]))
-        self.rules = response['rules']
+        self.rules = self.parse_rules(response['rules'])
         self.source_key = response['sourceKey']
         self.chunk_count = response['chunkCount']
         self.memory_usage = response['memoryUsage']
