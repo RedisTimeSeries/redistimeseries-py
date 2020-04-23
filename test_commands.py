@@ -205,5 +205,42 @@ class RedisTimeSeriesTest(TestCase):
         uncompressed_info = rts.info('uncompressed')
         self.assertNotEqual(compressed_info.memory_usage, uncompressed_info.memory_usage)
 
+    def testUncompressed(self):
+        rts.create('info_series', retention_msecs=3600000, labels={'Test':'This', 'Taste':'That'})
+        rts.create('avg_series', retention_msecs=3600000, labels={'Something':'Else'})
+        rts.createrule('info_series','avg_series', 'AVG', 20)
+        for i in range(102):
+            rts.add('info_series', i, 1.1 * i)
+
+        info = rts.info('info_series')
+        self.assertEqual(info.source_key, None)
+        self.assertEqual(info.chunk_count, 1)
+        self.assertEqual(info.memory_usage, 4293)
+        self.assertEqual(info.total_samples, 102)
+        self.assertEqual(info.retention_msecs, 3600000)
+        self.assertEqual(info.last_time_stamp, 101)
+        self.assertEqual(info.first_time_stamp, 0)
+        self.assertEqual(info.max_samples_per_chunk, 256)
+        self.assertEqual(info.rules, [['avg_series', 20, 'AVG']])
+        self.assertEqual(info.labels, {'Test': 'This', 'Taste': 'That'})
+
+        info = rts.info('avg_series')
+        self.assertEqual(info.source_key, 'info_series')
+        self.assertEqual(info.chunk_count, 1)
+        self.assertEqual(info.memory_usage, 4215)
+        self.assertEqual(info.total_samples, 5)
+        self.assertEqual(info.retention_msecs, 3600000)
+        self.assertEqual(info.last_time_stamp, 80)
+        self.assertEqual(info.first_time_stamp, 0)
+        self.assertEqual(info.max_samples_per_chunk, 256)
+        self.assertEqual(info.rules, [])
+        self.assertEqual(info.labels, {'Something':'Else'})
+
+        # check support for camelback vars 
+        self.assertEqual(info.sourceKey, 'info_series')
+        self.assertEqual(info.chunkCount, 1)
+        self.assertEqual(info.lastTimestamp, 80)
+        self.assertEqual(info.maxSamplesPerChunk, 256)
+        
 if __name__ == '__main__':
     unittest.main()

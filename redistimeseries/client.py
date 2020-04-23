@@ -28,6 +28,23 @@ class TSInfo(object):
         self.first_time_stamp = response['firstTimestamp']
         self.max_samples_per_chunk = response['maxSamplesPerChunk']
 
+    # backwards support
+    @property
+    def sourceKey(self):
+        return self.source_key
+        
+    @property
+    def chunkCount(self):
+        return self.chunk_count
+        
+    @property
+    def lastTimestamp(self):
+        return self.last_time_stamp
+        
+    @property
+    def maxSamplesPerChunk(self):
+        return self.max_samples_per_chunk        
+
 def list_to_dict(aList):
     return {nativestr(aList[i][0]):nativestr(aList[i][1])
                 for i in range(len(aList))}
