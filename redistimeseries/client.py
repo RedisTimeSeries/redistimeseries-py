@@ -1,7 +1,15 @@
 from redis import Redis
 from redis.client import Pipeline
 from redis.client import bool_ok
-from redis._compat import nativestr
+import six
+
+def to_string(s):
+    if isinstance(s, six.string_types):
+        return s
+    elif isinstance(s, six.binary_type):
+        return s.decode('utf-8')
+    else:
+        return s  # Not a string we care about
 
 class TSInfo(object):
     rules = []
@@ -18,12 +26,12 @@ class TSInfo(object):
     def parse_rules(self, rules):
         if rules != []:
             for rule in rules:
-                rule[0] = nativestr(rule[0])
-                rule[2] = nativestr(rule[2])
+                rule[0] = to_string(rule[0])
+                rule[2] = to_string(rule[2])
         return rules
 
     def __init__(self, args):
-        response = dict(zip(map(nativestr, args[::2]), args[1::2]))
+        response = dict(zip(map(to_string, args[::2]), map(to_string, args[1::2])))
         self.rules = self.parse_rules(response['rules'])
         self.source_key = response['sourceKey']
         self.chunk_count = response['chunkCount']
@@ -53,7 +61,7 @@ class TSInfo(object):
         return self.max_samples_per_chunk        
 
 def list_to_dict(aList):
-    return {nativestr(aList[i][0]):nativestr(aList[i][1])
+    return {to_string(aList[i][0]):to_string(aList[i][1])
                 for i in range(len(aList))}
 
 def parse_range(response):
@@ -62,7 +70,7 @@ def parse_range(response):
 def parse_m_range(response):
     res = []
     for item in response:
-        res.append({ nativestr(item[0]) : [list_to_dict(item[1]),
+        res.append({ to_string(item[0]) : [list_to_dict(item[1]),
                                 parse_range(item[2])]})
     return res
 
@@ -75,9 +83,9 @@ def parse_m_get(response):
     res = []
     for item in response:
         if item[2] == []:
-            res.append({ nativestr(item[0]) : [list_to_dict(item[1]), None, None]})
+            res.append({ to_string(item[0]) : [list_to_dict(item[1]), None, None]})
         else:
-            res.append({ nativestr(item[0]) : [list_to_dict(item[1]),
+            res.append({ to_string(item[0]) : [list_to_dict(item[1]),
                                 int(item[2][0]), float(item[2][1])]})
 
     return res
@@ -85,7 +93,7 @@ def parse_m_get(response):
 def parseToList(response):
     res = []
     for item in response:
-        res.append(nativestr(item))
+        res.append(to_string(item))
     return res
 
 class Client(Redis): #changed from StrictRedis
