@@ -5,17 +5,21 @@
 [![Codecov](https://codecov.io/gh/RedisTimeSeries/redistimeseries-py/branch/master/graph/badge.svg)](https://codecov.io/gh/RedisTimeSeries/redistimeseries-py)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/RedisTimeSeries/redistimeseries-py.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/RedisTimeSeries/redistimeseries-py/context:python)
 
+# redistimeseries-py
+[![Forum](https://img.shields.io/badge/Forum-RedisTimeSeries-blue)](https://forum.redislabs.com/c/modules/redistimeseries)
+[![Gitter](https://badges.gitter.im/RedisLabs/RedisTimeSeries.svg)](https://gitter.im/RedisLabs/RedisTimeSeries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 redistimeseries-py is a package that gives developers easy access to RedisTimeSeries module. The package extends [redis-py](https://github.com/andymccurdy/redis-py)'s interface with RedisTimeSeries's API.  
 
-### Installation
+## Installation
 ``` 
 $ pip install redistimeseries
 ```
 
-### API
+## API
 The complete documentation of RedisTimeSeries's commands can be found at [RedisTimeSeries's website](http://redistimeseries.io/).
 
-### Usage example
+## Usage example
 
 ```sql
 # Simple example
@@ -45,5 +49,5 @@ rts.get('avgRule')
 rts.info('sumRule').__dict__
 ```
 
-### License
+## License
 [BSD 3-Clause](https://github.com/ashtul/redistimeseries-py/blob/master/LICENSE)
