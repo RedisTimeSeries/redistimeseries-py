@@ -193,7 +193,7 @@ class RedisTimeSeriesTest(TestCase):
         pipeline.execute()
         
         info = rts.info('with_pipeline')
-        self.assertEqual(info.lastTimeStamp, 99)
+        self.assertEqual(info.last_time_stamp, 99)
         self.assertEqual(info.total_samples, 100)
         self.assertEqual(rts.get('with_pipeline')[1], 99 * 1.1)
 
@@ -205,5 +205,42 @@ class RedisTimeSeriesTest(TestCase):
         uncompressed_info = rts.info('uncompressed')
         self.assertNotEqual(compressed_info.memory_usage, uncompressed_info.memory_usage)
 
+    def testInfo(self):
+        rts.create('info_series', retention_msecs=3600000, labels={'Test':'This', 'Taste':'That'})
+        rts.create('avg_series', retention_msecs=3600000, labels={'Something':'Else'})
+        rts.createrule('info_series','avg_series', 'AVG', 20)
+        for i in range(102):
+            rts.add('info_series', i, 1.1 * i)
+
+        info_src = rts.info('info_series')
+        self.assertEqual(info_src.source_key, None)
+        self.assertEqual(info_src.chunk_count, 1)
+        self.assertEqual(info_src.memory_usage, 4293)
+        self.assertEqual(info_src.total_samples, 102)
+        self.assertEqual(info_src.retention_msecs, 3600000)
+        self.assertEqual(info_src.last_time_stamp, 101)
+        self.assertEqual(info_src.first_time_stamp, 0)
+        self.assertEqual(info_src.max_samples_per_chunk, 256)
+        self.assertEqual(info_src.rules, [['avg_series', 20, 'AVG']])
+        self.assertEqual(info_src.labels, {'Test': 'This', 'Taste': 'That'})
+
+        info_avg = rts.info('avg_series')
+        self.assertEqual(info_avg.source_key, 'info_series')
+        self.assertEqual(info_avg.chunk_count, 1)
+        self.assertEqual(info_avg.memory_usage, 4215)
+        self.assertEqual(info_avg.total_samples, 5)
+        self.assertEqual(info_avg.retention_msecs, 3600000)
+        self.assertEqual(info_avg.last_time_stamp, 80)
+        self.assertEqual(info_avg.first_time_stamp, 0)
+        self.assertEqual(info_avg.max_samples_per_chunk, 256)
+        self.assertEqual(info_avg.rules, [])
+        self.assertEqual(info_avg.labels, {'Something':'Else'})
+
+        # check support for camelback vars 
+        self.assertEqual(info_avg.sourceKey, 'info_series')
+        self.assertEqual(info_avg.chunkCount, 1)
+        self.assertEqual(info_avg.lastTimestamp, 80)
+        self.assertEqual(info_avg.maxSamplesPerChunk, 256)
+        
 if __name__ == '__main__':
     unittest.main()
