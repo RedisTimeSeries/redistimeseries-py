@@ -3,6 +3,7 @@ import time
 from time import sleep
 from unittest import TestCase
 from redistimeseries.client import Client as RedisTimeSeries
+from redis import Redis
 
 rts = None
 port = 6379
@@ -11,7 +12,7 @@ class RedisTimeSeriesTest(TestCase):
     def setUp(self):
         global rts
         rts = RedisTimeSeries(port=port)
-        rts.flushdb()
+        rts.redis.flushdb()
 
     def testCreate(self):
         '''Test TS.CREATE calls'''
@@ -204,6 +205,18 @@ class RedisTimeSeriesTest(TestCase):
         compressed_info = rts.info('compressed')
         uncompressed_info = rts.info('uncompressed')
         self.assertNotEqual(compressed_info.memory_usage, uncompressed_info.memory_usage)
+
+    def testPool(self):
+        redis = Redis(port=port)
+        client = RedisTimeSeries(conn=redis, port=666)
+
+        name = 'test'
+        client.create(name)
+        self.assertEqual(None, client.get(name))
+        client.add(name, 2, 3)
+        self.assertEqual(2, client.get(name)[0])
+        info = client.info(name)
+        self.assertEqual(1, info.total_samples)
 
 if __name__ == '__main__':
     unittest.main()
