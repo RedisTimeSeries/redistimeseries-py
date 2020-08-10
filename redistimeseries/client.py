@@ -92,7 +92,6 @@ class Client(object): #changed from StrictRedis
         Creates a new RedisTimeSeries client.
         """
         self.redis = conn if conn is not None else Redis(*args, **kwargs)
-        #self.pipeline = self.redis.pipeline(False)
 
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
