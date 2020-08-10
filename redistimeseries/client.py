@@ -64,7 +64,7 @@ def parseToList(response):
         res.append(nativestr(item))
     return res
 
-class Client(Redis): #changed from StrictRedis
+class Client(object): #changed from StrictRedis
     """
     This class subclasses redis-py's `Redis` and implements
     RedisTimeSeries's commands (prefixed with "ts").
@@ -87,12 +87,13 @@ class Client(Redis): #changed from StrictRedis
     INFO_CMD = 'TS.INFO'
     QUERYINDEX_CMD = 'TS.QUERYINDEX'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, conn=None, *args, **kwargs):
         """
         Creates a new RedisTimeSeries client.
         """
-        Redis.__init__(self, *args, **kwargs)
-            
+        self.redis = conn if conn is not None else Redis(*args, **kwargs)
+        #self.pipeline = self.redis.pipeline(False)
+
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
             self.CREATE_CMD : bool_ok,
@@ -107,7 +108,7 @@ class Client(Redis): #changed from StrictRedis
             self.QUERYINDEX_CMD : parseToList,
         }
         for k in MODULE_CALLBACKS:
-            self.set_response_callback(k, MODULE_CALLBACKS[k])
+            self.redis.set_response_callback(k, MODULE_CALLBACKS[k])
 
     @staticmethod
     def appendUncompressed(params, uncompressed):
@@ -157,7 +158,7 @@ class Client(Redis): #changed from StrictRedis
         self.appendUncompressed(params, uncompressed)
         self.appendLabels(params, labels)
 
-        return self.execute_command(self.CREATE_CMD, *params)
+        return self.redis.execute_command(self.CREATE_CMD, *params)
         
     def alter(self, key, retention_msecs=None, labels={}):
         """
@@ -168,7 +169,7 @@ class Client(Redis): #changed from StrictRedis
         self.appendRetention(params, retention_msecs)
         self.appendLabels(params, labels)
 
-        return self.execute_command(self.ALTER_CMD, *params)
+        return self.redis.execute_command(self.ALTER_CMD, *params)
 
     def add(self, key, timestamp, value, retention_msecs=None,
                         uncompressed=False, labels={}):
@@ -183,7 +184,7 @@ class Client(Redis): #changed from StrictRedis
         self.appendUncompressed(params, uncompressed)
         self.appendLabels(params, labels)
 
-        return self.execute_command(self.ADD_CMD, *params)
+        return self.redis.execute_command(self.ADD_CMD, *params)
 
     def madd(self, ktv_tuples):
         """
@@ -197,7 +198,7 @@ class Client(Redis): #changed from StrictRedis
             for item in ktv:
                 params.append(item)
 
-        return self.execute_command(self.MADD_CMD, *params)
+        return self.redis.execute_command(self.MADD_CMD, *params)
 
     def incrby(self, key, value, timestamp=None, retention_msecs=None,
                 uncompressed=False, labels={}):
@@ -213,7 +214,7 @@ class Client(Redis): #changed from StrictRedis
         self.appendUncompressed(params, uncompressed)
         self.appendLabels(params, labels)
 
-        return self.execute_command(self.INCRBY_CMD, *params)
+        return self.redis.execute_command(self.INCRBY_CMD, *params)
 
     def decrby(self, key, value, timestamp=None, retention_msecs=None,
                 uncompressed=False, labels={}):
@@ -229,7 +230,7 @@ class Client(Redis): #changed from StrictRedis
         self.appendUncompressed(params, uncompressed)
         self.appendLabels(params, labels)
         
-        return self.execute_command(self.DECRBY_CMD, *params)
+        return self.redis.execute_command(self.DECRBY_CMD, *params)
 
     def createrule(self, source_key, dest_key, 
                      aggregation_type, bucket_size_msec):
@@ -242,11 +243,11 @@ class Client(Redis): #changed from StrictRedis
         params=[source_key, dest_key]
         self.appendAggregation(params, aggregation_type, bucket_size_msec)
 
-        return self.execute_command(self.CREATERULE_CMD, *params)
+        return self.redis.execute_command(self.CREATERULE_CMD, *params)
 
     def deleterule(self, source_key, dest_key):
         """Deletes a compaction rule"""
-        return self.execute_command(self.DELETERULE_CMD, source_key, dest_key)
+        return self.redis.execute_command(self.DELETERULE_CMD, source_key, dest_key)
    
     def range(self, key, from_time, to_time, count=None,
                 aggregation_type=None, bucket_size_msec=0):
@@ -262,7 +263,7 @@ class Client(Redis): #changed from StrictRedis
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
 
-        return self.execute_command(self.RANGE_CMD, *params)
+        return self.redis.execute_command(self.RANGE_CMD, *params)
 
     def mrange(self, from_time, to_time, filters, count=None,
                      aggregation_type=None, bucket_size_msec=0, with_labels=False):
@@ -282,11 +283,11 @@ class Client(Redis): #changed from StrictRedis
         self.appendWithLabels(params, with_labels)
         params.extend(['FILTER'])
         params += filters
-        return self.execute_command(self.MRANGE_CMD, *params)
+        return self.redis.execute_command(self.MRANGE_CMD, *params)
 
     def get(self, key):
         """Gets the last sample of ``key``"""
-        return self.execute_command(self.GET_CMD, key)
+        return self.redis.execute_command(self.GET_CMD, key)
 
     def mget(self, filters, with_labels=False):
         """Get the last samples matching the specific ``filter``."""
@@ -294,15 +295,15 @@ class Client(Redis): #changed from StrictRedis
         self.appendWithLabels(params, with_labels)
         params.extend(['FILTER'])
         params += filters
-        return self.execute_command(self.MGET_CMD, *params)
+        return self.redis.execute_command(self.MGET_CMD, *params)
    
     def info(self, key):
         """Gets information of ``key``"""
-        return self.execute_command(self.INFO_CMD, key)
+        return self.redis.execute_command(self.INFO_CMD, key)
 
     def queryindex(self, filters):
         """Get all the keys matching the ``filter`` list."""
-        return self.execute_command(self.QUERYINDEX_CMD, *filters)
+        return self.redis.execute_command(self.QUERYINDEX_CMD, *filters)
 
     def pipeline(self, transaction=True, shard_hint=None):
         """
@@ -314,10 +315,11 @@ class Client(Redis): #changed from StrictRedis
         Overridden in order to provide the right client through the pipeline.
         """
         p = Pipeline(
-            connection_pool=self.connection_pool,
-            response_callbacks=self.response_callbacks,
+            connection_pool=self.redis.connection_pool,
+            response_callbacks=self.redis.response_callbacks,
             transaction=transaction,
             shard_hint=shard_hint)
+        p.redis = p
         return p
 
 class Pipeline(Pipeline, Client):
