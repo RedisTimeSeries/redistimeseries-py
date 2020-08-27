@@ -13,7 +13,10 @@ class TSInfo(object):
     retention_msecs = None
     last_time_stamp = None
     first_time_stamp = None
+    # As of RedisTimeseries >= v1.4 max_samples_per_chunk is deprecated in favor of chunk_size
     max_samples_per_chunk = None
+    chunk_size = None
+
 
     def __init__(self, args):
         response = dict(zip(map(nativestr, args[::2]), args[1::2]))
@@ -26,7 +29,11 @@ class TSInfo(object):
         self.retention_msecs = response['retentionTime']
         self.lastTimeStamp = response['lastTimestamp']
         self.first_time_stamp = response['firstTimestamp']
-        self.maxSamplesPerChunk = response['maxSamplesPerChunk']
+        if 'maxSamplesPerChunk' in response:
+            self.max_samples_per_chunk = response['maxSamplesPerChunk']
+            self.chunk_size = self.max_samples_per_chunk * 16 # backward compatible changes
+        if 'chunkSize' in response:
+            self.chunkSize = response['chunkSize']
 
 def list_to_dict(aList):
     return {nativestr(aList[i][0]):nativestr(aList[i][1])
