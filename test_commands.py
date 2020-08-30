@@ -5,14 +5,21 @@ from unittest import TestCase
 from redistimeseries.client import Client as RedisTimeSeries
 from redis import Redis
 
+version = None
 rts = None
 port = 6379
 
 class RedisTimeSeriesTest(TestCase):
     def setUp(self):
         global rts
+        global version
         rts = RedisTimeSeries(port=port)
         rts.redis.flushdb()
+        modules = rts.redis.execute_command("module","list")
+        if modules is not None:
+            for module_info in modules:
+                if module_info[1] == b'timeseries':
+                    version = int(module_info[3])
 
     def testCreate(self):
         '''Test TS.CREATE calls'''
@@ -111,6 +118,22 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(20, len(rts.range(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
         self.assertEqual(10, len(rts.range(1, 0, 500, count=10)))
 
+    def testRevRange(self):
+        '''Test TS.REVRANGE calls which returns reverse range by key'''
+        # TS.REVRANGE is available since RedisTimeSeries >= v1.4
+        if version is None or version < 14000:
+            return
+
+        for i in range(100):
+            rts.add(1, i, i % 7)
+        self.assertEqual(100, len(rts.range(1, 0, 200)))
+        for i in range(100):
+            rts.add(1, i+200, i % 7)
+        self.assertEqual(200, len(rts.range(1, 0, 500)))
+        #first sample isn't returned
+        self.assertEqual(20, len(rts.revrange(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
+        self.assertEqual(10, len(rts.revrange(1, 0, 500, count=10)))
+
     def testMultiRange(self):
         '''Test TS.MRANGE calls which returns range by filter'''
 
@@ -137,6 +160,37 @@ class RedisTimeSeriesTest(TestCase):
         #test withlabels
         self.assertEqual({}, res[0]['1'][0])
         res = rts.mrange(0, 200, filters=['Test=This'], with_labels=True)
+        self.assertEqual({'Test': 'This'}, res[0]['1'][0])
+
+    def testMultiReverseRange(self):
+        '''Test TS.MREVRANGE calls which returns range by filter'''
+        # TS.MREVRANGE is available since RedisTimeSeries >= v1.4
+        if version is None or version < 14000:
+            return
+
+        rts.create(1, labels={'Test': 'This'})
+        rts.create(2, labels={'Test': 'This', 'Taste': 'That'})
+        for i in range(100):
+            rts.add(1, i, i % 7)
+            rts.add(2, i, i % 11)
+
+        res = rts.mrange(0, 200, filters=['Test=This'])
+        self.assertEqual(2, len(res))
+        self.assertEqual(100, len(res[0]['1'][1]))
+
+        res = rts.mrange(0, 200, filters=['Test=This'], count=10)
+        self.assertEqual(10, len(res[0]['1'][1]))
+
+        for i in range(100):
+            rts.add(1, i + 200, i % 7)
+        res = rts.mrevrange(0, 500, filters=['Test=This'],
+                         aggregation_type='avg', bucket_size_msec=10)
+        self.assertEqual(2, len(res))
+        self.assertEqual(20, len(res[0]['1'][1]))
+
+        # test withlabels
+        self.assertEqual({}, res[0]['1'][0])
+        res = rts.mrevrange(0, 200, filters=['Test=This'], with_labels=True)
         self.assertEqual({'Test': 'This'}, res[0]['1'][0])
 
     def testGet(self):
