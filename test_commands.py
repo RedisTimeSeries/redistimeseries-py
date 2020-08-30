@@ -12,12 +12,13 @@ port = 6379
 class RedisTimeSeriesTest(TestCase):
     def setUp(self):
         global rts
+        global version
         rts = RedisTimeSeries(port=port)
         rts.redis.flushdb()
-        modules = rts.redis.execute_command("module","list")
+        modules = rts.redis.execute_command("module", "list")
         if modules is not None:
             for module_info in modules:
-                if module_info[0] == b'timeseries':
+                if module_info[1] == b'timeseries':
                     version = int(module_info[3])
 
     def testCreate(self):
