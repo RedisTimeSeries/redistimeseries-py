@@ -31,7 +31,7 @@ class RedisTimeSeriesTest(TestCase):
         info = rts.info(4)
         self.assertEqual(20, info.retention_msecs)
         self.assertEqual('Series', info.labels['Time'])
-        if version is not None and version >= 14000:
+        if version is None or version < 14000 return
             # Test for a chunk size of 128 Bytes
             self.assertTrue(rts.create("time-serie-1",chunk_size=128))
             info = rts.info("time-serie-1")
