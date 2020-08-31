@@ -66,7 +66,42 @@ jobs:
             . venv/bin/activate
             codecov
 
-  build_nightly:
+  build_latest:
+    docker:
+      - image: circleci/python:3.7.1
+      - image: redislabs/redistimeseries:latest
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - restore_cache: # Download and cache dependencies
+          keys:
+            - v1-dependencies-{{ checksum "requirements.txt" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            virtualenv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+            pip install codecov
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            REDIS_PORT=6379 python test_commands.py
+
+  build_edge:
     docker:
       - image: circleci/python:3.7.1
       - image: redislabs/redistimeseries:edge
@@ -108,6 +143,7 @@ workflows:
   commit:
     jobs:
       - build
+      - build_latest
   nightly:
     triggers:
       - schedule:
@@ -117,4 +153,5 @@ workflows:
               only:
                 - master
     jobs:
-      - build_nightly
+      - build_edge
+      - build_latest
