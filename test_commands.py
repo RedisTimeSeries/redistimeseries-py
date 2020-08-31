@@ -31,11 +31,14 @@ class RedisTimeSeriesTest(TestCase):
         info = rts.info(4)
         self.assertEqual(20, info.retention_msecs)
         self.assertEqual('Series', info.labels['Time'])
-        if version is None or version < 14000 return
-            # Test for a chunk size of 128 Bytes
-            self.assertTrue(rts.create("time-serie-1",chunk_size=128))
-            info = rts.info("time-serie-1")
-            self.assertEqual(128, info.chunk_size)
+
+        if version is None or version < 14000:
+            return
+
+        # Test for a chunk size of 128 Bytes
+        self.assertTrue(rts.create("time-serie-1",chunk_size=128))
+        info = rts.info("time-serie-1")
+        self.assertEqual(128, info.chunk_size)
 
 
     def testAlter(self):
@@ -65,11 +68,13 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(10, info.retention_msecs)
         self.assertEqual('Labs', info.labels['Redis'])
 
-        if version is not None and version >= 14000:
-            # Test for a chunk size of 128 Bytes on TS.ADD
-            self.assertTrue(rts.add("time-serie-1", 1, 10.0, chunk_size=128))
-            info = rts.info("time-serie-1")
-            self.assertEqual(128, info.chunk_size)
+        if version is None or version < 14000:
+            return
+
+        # Test for a chunk size of 128 Bytes on TS.ADD
+        self.assertTrue(rts.add("time-serie-1", 1, 10.0, chunk_size=128))
+        info = rts.info("time-serie-1")
+        self.assertEqual(128, info.chunk_size)
 
     def testMAdd(self):
         '''Test TS.MADD calls'''
@@ -95,16 +100,18 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual((7, 3.75), rts.get(2))
         self.assertTrue(rts.decrby(2, 1.5, timestamp=15))
         self.assertEqual((15, 2.25), rts.get(2))
-        if version is not None and version >= 14000:
-            # Test for a chunk size of 128 Bytes on TS.INCRBY
-            self.assertTrue(rts.incrby("time-serie-1", 10, chunk_size=128))
-            info = rts.info("time-serie-1")
-            self.assertEqual(128, info.chunk_size)
+        if version is None or version < 14000:
+            return
 
-            # Test for a chunk size of 128 Bytes on TS.DECRBY
-            self.assertTrue(rts.decrby("time-serie-2", 10, chunk_size=128))
-            info = rts.info("time-serie-2")
-            self.assertEqual(128, info.chunk_size)
+        # Test for a chunk size of 128 Bytes on TS.INCRBY
+        self.assertTrue(rts.incrby("time-serie-1", 10, chunk_size=128))
+        info = rts.info("time-serie-1")
+        self.assertEqual(128, info.chunk_size)
+
+        # Test for a chunk size of 128 Bytes on TS.DECRBY
+        self.assertTrue(rts.decrby("time-serie-2", 10, chunk_size=128))
+        info = rts.info("time-serie-2")
+        self.assertEqual(128, info.chunk_size)
 
     def testCreateRule(self):
         '''Test TS.CREATERULE and TS.DELETERULE calls'''
