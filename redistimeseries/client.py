@@ -33,7 +33,7 @@ class TSInfo(object):
             self.max_samples_per_chunk = response['maxSamplesPerChunk']
             self.chunk_size = self.max_samples_per_chunk * 16 # backward compatible changes
         if 'chunkSize' in response:
-            self.chunkSize = response['chunkSize']
+            self.chunk_size = response['chunkSize']
 
 def list_to_dict(aList):
     return {nativestr(aList[i][0]):nativestr(aList[i][1])
@@ -158,14 +158,30 @@ class Client(object): #changed from StrictRedis
         params.append('AGGREGATION')
         params.extend([aggregation_type, bucket_size_msec])
 
-    def create(self, key, retention_msecs=None, uncompressed=False, labels={}):
+    @staticmethod
+    def appendChunkSize(params, chunk_size):
+        if chunk_size is not None:
+            params.extend(['CHUNK_SIZE', chunk_size])
+
+    def create(self, key, retention_msecs=None, uncompressed=False, labels={}, chunk_size=None):
         """
-        Creates a new time-series ``key`` with ``retention_msecs`` in
-        milliseconds and ``labels``.
+        Create a new time-series.
+
+        Args:
+            key: time-series key
+            retention_msecs: Maximum age for samples compared to last event time (in milliseconds).
+                        If None or 0 is passed then  the series is not trimmed at all.
+            uncompressed: since RedisTimeSeries v1.2, both timestamps and values are compressed by default.
+                        Adding this flag will keep data in an uncompressed form. Compression not only saves
+                        memory but usually improve performance due to lower number of memory accesses
+            labels: Set of label-value pairs that represent metadata labels of the key.
+            chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
+                        You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
         """
         params = [key]
         self.appendRetention(params, retention_msecs)
         self.appendUncompressed(params, uncompressed)
+        self.appendChunkSize(params, chunk_size)
         self.appendLabels(params, labels)
 
         return self.redis.execute_command(self.CREATE_CMD, *params)
@@ -182,16 +198,27 @@ class Client(object): #changed from StrictRedis
         return self.redis.execute_command(self.ALTER_CMD, *params)
 
     def add(self, key, timestamp, value, retention_msecs=None,
-                        uncompressed=False, labels={}):
+                        uncompressed=False, labels={}, chunk_size=None):
         """
-        Appends (or creates and appends) a new ``value`` to series
-        ``key`` with ``timestamp``. If ``key`` is created, 
-        ``retention_msecs`` and ``labels`` are applied. Return value
-        is timestamp of insertion.
+        Append (or create and append) a new sample to the series.
+
+        Args:
+            key: time-series key
+            timestamp: timestamp of the sample. * can be used for automatic timestamp (using the system clock).
+            value: numeric data value of the sample
+            retention_msecs: Maximum age for samples compared to last event time (in milliseconds).
+                        If None or 0 is passed then  the series is not trimmed at all.
+            uncompressed: since RedisTimeSeries v1.2, both timestamps and values are compressed by default.
+                        Adding this flag will keep data in an uncompressed form. Compression not only saves
+                        memory but usually improve performance due to lower number of memory accesses
+            labels: Set of label-value pairs that represent metadata labels of the key.
+            chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
+                        You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
         """
         params = [key, timestamp, value]
         self.appendRetention(params, retention_msecs)
         self.appendUncompressed(params, uncompressed)
+        self.appendChunkSize(params, chunk_size)
         self.appendLabels(params, labels)
 
         return self.redis.execute_command(self.ADD_CMD, *params)
@@ -211,33 +238,57 @@ class Client(object): #changed from StrictRedis
         return self.redis.execute_command(self.MADD_CMD, *params)
 
     def incrby(self, key, value, timestamp=None, retention_msecs=None,
-                uncompressed=False, labels={}):
+                uncompressed=False, labels={}, chunk_size=None):
         """
-        Increases latest value in ``key`` by ``value``.
-        ``timestamp`` can be set or system time will be used.
-        If ``key`` is created, ``retention_msecs`` and ``labels`` are
-        applied. 
+        Increment (or create an time-series and increment) the latest sample's of a series.
+        This command can be used as a counter or gauge that automatically gets history as a time series.
+
+        Args:
+            key: time-series key
+            value: numeric data value of the sample
+            timestamp: timestamp of the sample. None can be used for automatic timestamp (using the system clock).
+            retention_msecs: Maximum age for samples compared to last event time (in milliseconds).
+                        If None or 0 is passed then  the series is not trimmed at all.
+            uncompressed: since RedisTimeSeries v1.2, both timestamps and values are compressed by default.
+                        Adding this flag will keep data in an uncompressed form. Compression not only saves
+                        memory but usually improve performance due to lower number of memory accesses
+            labels: Set of label-value pairs that represent metadata labels of the key.
+            chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
+                        You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
         """
         params = [key, value]
         self.appendTimestamp(params, timestamp)
         self.appendRetention(params, retention_msecs)
         self.appendUncompressed(params, uncompressed)
+        self.appendChunkSize(params, chunk_size)
         self.appendLabels(params, labels)
 
         return self.redis.execute_command(self.INCRBY_CMD, *params)
 
     def decrby(self, key, value, timestamp=None, retention_msecs=None,
-                uncompressed=False, labels={}):
+                uncompressed=False, labels={}, chunk_size=None):
         """
-        Decreases latest value in ``key`` by ``value``.
-        ``timestamp` can be set or system time will be used.
-        If ``key`` is created, ``retention_msecs`` and ``labels`` are
-        applied. 
+        Decrement (or create an time-series and decrement) the latest sample's of a series.
+        This command can be used as a counter or gauge that automatically gets history as a time series.
+
+        Args:
+            key: time-series key
+            value: numeric data value of the sample
+            timestamp: timestamp of the sample. None can be used for automatic timestamp (using the system clock).
+            retention_msecs: Maximum age for samples compared to last event time (in milliseconds).
+                        If None or 0 is passed then  the series is not trimmed at all.
+            uncompressed: since RedisTimeSeries v1.2, both timestamps and values are compressed by default.
+                        Adding this flag will keep data in an uncompressed form. Compression not only saves
+                        memory but usually improve performance due to lower number of memory accesses
+            labels: Set of label-value pairs that represent metadata labels of the key.
+            chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
+                        You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
         """
         params = [key, value]
         self.appendTimestamp(params, timestamp)
         self.appendRetention(params, retention_msecs)
         self.appendUncompressed(params, uncompressed)
+        self.appendChunkSize(params, chunk_size)
         self.appendLabels(params, labels)
         
         return self.redis.execute_command(self.DECRBY_CMD, *params)
