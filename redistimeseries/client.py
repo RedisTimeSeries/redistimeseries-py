@@ -88,7 +88,9 @@ class Client(object): #changed from StrictRedis
     CREATERULE_CMD = 'TS.CREATERULE'
     DELETERULE_CMD = 'TS.DELETERULE'
     RANGE_CMD = 'TS.RANGE'
+    REVRANGE_CMD = 'TS.REVRANGE'
     MRANGE_CMD = 'TS.MRANGE'
+    MREVRANGE_CMD = 'TS.MREVRANGE'
     GET_CMD = 'TS.GET'
     MGET_CMD = 'TS.MGET'
     INFO_CMD = 'TS.INFO'
@@ -107,7 +109,9 @@ class Client(object): #changed from StrictRedis
             self.CREATERULE_CMD : bool_ok,
             self.DELETERULE_CMD : bool_ok,
             self.RANGE_CMD : parse_range,
+            self.REVRANGE_CMD: parse_range,
             self.MRANGE_CMD : parse_m_range,
+            self.MREVRANGE_CMD: parse_m_range,
             self.GET_CMD : parse_get,
             self.MGET_CMD : parse_m_get,
             self.INFO_CMD : TSInfo,
@@ -305,33 +309,56 @@ class Client(object): #changed from StrictRedis
     def deleterule(self, source_key, dest_key):
         """Deletes a compaction rule"""
         return self.redis.execute_command(self.DELETERULE_CMD, source_key, dest_key)
-   
-    def range(self, key, from_time, to_time, count=None,
-                aggregation_type=None, bucket_size_msec=0):
+
+    def __range_params(self, key, from_time, to_time, count, aggregation_type, bucket_size_msec):
         """
-        Query a range from ``key``, from ``from_time`` to ``to_time``.
-        ``count`` limits the number of results.
-        Can Aggregate for ``bucket_size_msec`` where an ``aggregation_type``
-        can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
-        'last', 'std.p', 'std.s', 'var.p', 'var.s']
+        Internal method to create TS.RANGE and TS.REVRANGE arguments
         """
         params = [key, from_time, to_time]
         self.appendCount(params, count)
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
+        return params
 
+    def range(self, key, from_time, to_time, count=None,
+                aggregation_type=None, bucket_size_msec=0):
+        """
+        Query a range in forward direction for a specific time-serie.
+
+        Args:
+            key: Key name for timeseries.
+            from_time: Start timestamp for the range query. - can be used to express the minimum possible timestamp (0).
+            to_time:  End timestamp for range query, + can be used to express the maximum possible timestamp.
+            count: Optional maximum number of returned results.
+            aggregation_type: Optional aggregation type. Can be one of ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
+        'last', 'std.p', 'std.s', 'var.p', 'var.s']
+            bucket_size_msec: Time bucket for aggregation in milliseconds.
+        """
+        params = self.__range_params(key, from_time, to_time, count, aggregation_type, bucket_size_msec)
         return self.redis.execute_command(self.RANGE_CMD, *params)
 
-    def mrange(self, from_time, to_time, filters, count=None,
-                     aggregation_type=None, bucket_size_msec=0, with_labels=False):
+    def revrange(self, key, from_time, to_time, count=None,
+              aggregation_type=None, bucket_size_msec=0):
         """
-        Query a range based on filters,retention_msecs from ``from_time`` to ``to_time``.
-        ``count`` limits the number of results.
-        ``filters`` are a list strings such as ['Test=This'].
-        Can Aggregate for ``bucket_size_msec`` where an ``aggregation_type``
-        can be ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
+        Query a range in reverse direction for a specific time-serie.
+        Note: This command is only available since RedisTimeSeries >= v1.4
+
+        Args:
+            key: Key name for timeseries.
+            from_time: Start timestamp for the range query. - can be used to express the minimum possible timestamp (0).
+            to_time:  End timestamp for range query, + can be used to express the maximum possible timestamp.
+            count: Optional maximum number of returned results.
+            aggregation_type: Optional aggregation type. Can be one of ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
         'last', 'std.p', 'std.s', 'var.p', 'var.s']
-        ``WITHLABELS`` appends labels to results.
+            bucket_size_msec: Time bucket for aggregation in milliseconds.
+        """
+        params = self.__range_params(key, from_time, to_time, count, aggregation_type, bucket_size_msec)
+        return self.redis.execute_command(self.REVRANGE_CMD, *params)
+
+
+    def __mrange_params(self, aggregation_type, bucket_size_msec, count, filters, from_time, to_time, with_labels):
+        """
+        Internal method to create TS.MRANGE and TS.MREVRANGE arguments
         """
         params = [from_time, to_time]
         self.appendCount(params, count)
@@ -340,7 +367,45 @@ class Client(object): #changed from StrictRedis
         self.appendWithLabels(params, with_labels)
         params.extend(['FILTER'])
         params += filters
+        return params
+
+    def mrange(self, from_time, to_time, filters, count=None,
+                     aggregation_type=None, bucket_size_msec=0, with_labels=False):
+        """
+        Query a range across multiple time-series by filters in forward direction.
+
+        Args:
+            from_time: Start timestamp for the range query. - can be used to express the minimum possible timestamp (0).
+            to_time:  End timestamp for range query, + can be used to express the maximum possible timestamp.
+            filters: filter to match the time-series labels.
+            count: Optional maximum number of returned results.
+            aggregation_type: Optional aggregation type. Can be one of ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
+        'last', 'std.p', 'std.s', 'var.p', 'var.s']
+            bucket_size_msec: Time bucket for aggregation in milliseconds.
+            with_labels:  Include in the reply the label-value pairs that represent metadata labels of the time-series.
+            If this argument is not set, by default, an empty Array will be replied on the labels array position.
+        """
+        params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time, with_labels)
         return self.redis.execute_command(self.MRANGE_CMD, *params)
+
+    def mrevrange(self, from_time, to_time, filters, count=None,
+                     aggregation_type=None, bucket_size_msec=0, with_labels=False):
+        """
+        Query a range across multiple time-series by filters in reverse direction.
+
+        Args:
+            from_time: Start timestamp for the range query. - can be used to express the minimum possible timestamp (0).
+            to_time:  End timestamp for range query, + can be used to express the maximum possible timestamp.
+            filters: filter to match the time-series labels.
+            count: Optional maximum number of returned results.
+            aggregation_type: Optional aggregation type. Can be one of ['avg', 'sum', 'min', 'max', 'range', 'count', 'first',
+        'last', 'std.p', 'std.s', 'var.p', 'var.s']
+            bucket_size_msec: Time bucket for aggregation in milliseconds.
+            with_labels:  Include in the reply the label-value pairs that represent metadata labels of the time-series.
+            If this argument is not set, by default, an empty Array will be replied on the labels array position.
+        """
+        params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time, with_labels)
+        return self.redis.execute_command(self.MREVRANGE_CMD, *params)
 
     def get(self, key):
         """Gets the last sample of ``key``"""
