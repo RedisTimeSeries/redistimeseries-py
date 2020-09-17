@@ -56,7 +56,7 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            REDIS_PORT=6379 coverage run -m pytest -v test_commands.py
+            REDIS_PORT=6379 coverage run test_commands.py
 
       - run:
           name: codecove
@@ -97,7 +97,7 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            REDIS_PORT=6379 pytest -v test_commands.py
+            REDIS_PORT=6379 python test_commands.py
 
   build_edge:
     docker:
@@ -132,7 +132,7 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            REDIS_PORT=6379 pytest -v test_commands.py
+            REDIS_PORT=6379 python test_commands.py
 
       # no need for store_artifacts on nightly builds 
 
