@@ -40,20 +40,34 @@ class RedisTimeSeriesTest(TestCase):
         info = rts.info("time-serie-1")
         self.assertEqual(128, info.chunk_size)
 
+        # Test for duplicate policy
+        for duplicate_policy in ["block","last","first","min","max"]:
+            ts_name = "time-serie-ooo-{0}".format(duplicate_policy)
+            self.assertTrue(rts.create(ts_name, duplicate_policy=duplicate_policy))
+            info = rts.info(ts_name)
+            self.assertEqual(duplicate_policy, info.duplicate_policy)
 
     def testAlter(self):
         '''Test TS.ALTER calls'''
 
-        rts.create(1)
+        self.assertTrue(rts.create(1))
         self.assertEqual(0, rts.info(1).retention_msecs)
-        rts.alter(1, retention_msecs=10)
+        self.assertTrue(rts.alter(1, retention_msecs=10))
         self.assertEqual({}, rts.info(1).labels)
         self.assertEqual(10, rts.info(1).retention_msecs)
-        rts.alter(1, labels={'Time':'Series'})
+        self.assertTrue(rts.alter(1, labels={'Time':'Series'}))
         self.assertEqual('Series', rts.info(1).labels['Time'])
         self.assertEqual(10, rts.info(1).retention_msecs)
         pipe = rts.pipeline()
         self.assertTrue(pipe.create(2))
+
+        if version is None or version < 14000:
+            return
+        info = rts.info(1)
+        self.assertEqual(None, info.duplicate_policy)
+        self.assertTrue(rts.alter(1, duplicate_policy='min'))
+        info = rts.info(1)
+        self.assertEqual('min', info.duplicate_policy)
 
     def testAdd(self):
         '''Test TS.ADD calls'''
@@ -75,6 +89,34 @@ class RedisTimeSeriesTest(TestCase):
         self.assertTrue(rts.add("time-serie-1", 1, 10.0, chunk_size=128))
         info = rts.info("time-serie-1")
         self.assertEqual(128, info.chunk_size)
+
+        # Test for duplicate policy BLOCK
+        self.assertEqual(1, rts.add("time-serie-add-ooo-block", 1, 5.0))
+        try:
+            rts.add("time-serie-add-ooo-block", 1, 5.0, duplicate_policy='block')
+        except Exception as e:
+            self.assertEqual("TSDB: Error at upsert, update is not supported in BLOCK mode",e.__str__())
+
+        # Test for duplicate policy LAST
+        self.assertEqual(1, rts.add("time-serie-add-ooo-last", 1, 5.0))
+        self.assertEqual(1, rts.add("time-serie-add-ooo-last", 1, 10.0, duplicate_policy='last'))
+        self.assertEqual(10.0, rts.get("time-serie-add-ooo-last")[1])
+
+        # Test for duplicate policy FIRST
+        self.assertEqual(1, rts.add("time-serie-add-ooo-first", 1, 5.0))
+        self.assertEqual(1, rts.add("time-serie-add-ooo-first", 1, 10.0, duplicate_policy='first'))
+        self.assertEqual(5.0, rts.get("time-serie-add-ooo-first")[1])
+
+        # Test for duplicate policy MAX
+        self.assertEqual(1, rts.add("time-serie-add-ooo-max", 1, 5.0))
+        self.assertEqual(1, rts.add("time-serie-add-ooo-max", 1, 10.0, duplicate_policy='max'))
+        self.assertEqual(10.0, rts.get("time-serie-add-ooo-max")[1])
+
+        # Test for duplicate policy MIN
+        self.assertEqual(1, rts.add("time-serie-add-ooo-min", 1, 5.0))
+        self.assertEqual(1, rts.add("time-serie-add-ooo-min", 1, 10.0, duplicate_policy='min'))
+        self.assertEqual(5.0, rts.get("time-serie-add-ooo-min")[1])
+
 
     def testMAdd(self):
         '''Test TS.MADD calls'''
@@ -259,6 +301,13 @@ class RedisTimeSeriesTest(TestCase):
         info = rts.info(1)
         self.assertEqual(5, info.retention_msecs)
         self.assertEqual(info.labels['currentLabel'], 'currentData')
+        if version is None or version < 14000:
+            return
+        self.assertEqual(None, info.duplicate_policy)
+
+        rts.create('time-serie-2', duplicate_policy='min')
+        info = rts.info('time-serie-2')
+        self.assertEqual('min', info.duplicate_policy)
 
     def testQueryIndex(self):
         '''Test TS.QUERYINDEX calls'''
