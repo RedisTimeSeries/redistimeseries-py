@@ -58,8 +58,6 @@ jobs:
             . venv/bin/activate
             REDIS_PORT=6379 coverage run test_commands.py
 
-      - early_return_for_forked_pull_requests
-       
       - run:
           name: codecove
           command: |

@@ -16,6 +16,7 @@ class TSInfo(object):
     # As of RedisTimeseries >= v1.4 max_samples_per_chunk is deprecated in favor of chunk_size
     max_samples_per_chunk = None
     chunk_size = None
+    duplicate_policy = None
 
 
     def __init__(self, args):
@@ -34,6 +35,10 @@ class TSInfo(object):
             self.chunk_size = self.max_samples_per_chunk * 16 # backward compatible changes
         if 'chunkSize' in response:
             self.chunk_size = response['chunkSize']
+        if 'duplicatePolicy' in response:
+            self.duplicate_policy = response['duplicatePolicy']
+            if type(self.duplicate_policy) == bytes:
+                self.duplicate_policy = self.duplicate_policy.decode()
 
 def list_to_dict(aList):
     return {nativestr(aList[i][0]):nativestr(aList[i][1])
@@ -163,7 +168,15 @@ class Client(object): #changed from StrictRedis
         if chunk_size is not None:
             params.extend(['CHUNK_SIZE', chunk_size])
 
-    def create(self, key, retention_msecs=None, uncompressed=False, labels={}, chunk_size=None):
+    @staticmethod
+    def appendDuplicatePolicy(params, command, duplicate_policy):
+        if duplicate_policy is not None:
+            if command == 'TS.ADD':
+                params.extend(['ON_DUPLICATE', duplicate_policy])
+            else:
+                params.extend(['DUPLICATE_POLICY', duplicate_policy])
+
+    def create(self, key, **kwargs):
         """
         Create a new time-series.
 
@@ -177,28 +190,45 @@ class Client(object): #changed from StrictRedis
             labels: Set of label-value pairs that represent metadata labels of the key.
             chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
                         You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
+            duplicate_policy: since RedisTimeSeries v1.4 you can specify the duplicate sample policy ( Configure what to do on duplicate sample. )
+                        Can be one of:
+                              - 'block': an error will occur for any out of order sample
+                              - 'first': ignore the new value
+                              - 'last': override with latest value
+                              - 'min': only override if the value is lower than the existing value
+                              - 'max': only override if the value is higher than the existing value
+                        When this is not set, the server-wide default will be used.
         """
+        retention_msecs = kwargs.get('retention_msecs', None)
+        uncompressed = kwargs.get('uncompressed', False)
+        labels = kwargs.get('labels', {})
+        chunk_size = kwargs.get('chunk_size', None)
+        duplicate_policy = kwargs.get('duplicate_policy', None)
         params = [key]
         self.appendRetention(params, retention_msecs)
         self.appendUncompressed(params, uncompressed)
         self.appendChunkSize(params, chunk_size)
+        self.appendDuplicatePolicy(params, self.CREATE_CMD, duplicate_policy)
         self.appendLabels(params, labels)
 
         return self.redis.execute_command(self.CREATE_CMD, *params)
         
-    def alter(self, key, retention_msecs=None, labels={}):
+    def alter(self, key, **kwargs):
         """
         Update the retention, labels of an existing key. The parameters
         are the same as TS.CREATE.
         """
+        retention_msecs = kwargs.get('retention_msecs', None)
+        labels = kwargs.get('labels', {})
+        duplicate_policy = kwargs.get('duplicate_policy', None)
         params = [key]
         self.appendRetention(params, retention_msecs)
+        self.appendDuplicatePolicy(params, self.ALTER_CMD, duplicate_policy)
         self.appendLabels(params, labels)
 
         return self.redis.execute_command(self.ALTER_CMD, *params)
 
-    def add(self, key, timestamp, value, retention_msecs=None,
-                        uncompressed=False, labels={}, chunk_size=None):
+    def add(self, key, timestamp, value, **kwargs):
         """
         Append (or create and append) a new sample to the series.
 
@@ -214,11 +244,25 @@ class Client(object): #changed from StrictRedis
             labels: Set of label-value pairs that represent metadata labels of the key.
             chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
                         You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
+            duplicate_policy: since RedisTimeSeries v1.4 you can specify the duplicate sample policy ( Configure what to do on duplicate sample. )
+                        Can be one of:
+                              - 'block': an error will occur for any out of order sample
+                              - 'first': ignore the new value
+                              - 'last': override with latest value
+                              - 'min': only override if the value is lower than the existing value
+                              - 'max': only override if the value is higher than the existing value
+                        When this is not set, the server-wide default will be used.
         """
+        retention_msecs = kwargs.get('retention_msecs', None)
+        uncompressed = kwargs.get('uncompressed', False)
+        labels = kwargs.get('labels', {})
+        chunk_size = kwargs.get('chunk_size', None)
+        duplicate_policy = kwargs.get('duplicate_policy', None)
         params = [key, timestamp, value]
         self.appendRetention(params, retention_msecs)
         self.appendUncompressed(params, uncompressed)
         self.appendChunkSize(params, chunk_size)
+        self.appendDuplicatePolicy(params, self.ADD_CMD, duplicate_policy)
         self.appendLabels(params, labels)
 
         return self.redis.execute_command(self.ADD_CMD, *params)
@@ -237,8 +281,7 @@ class Client(object): #changed from StrictRedis
 
         return self.redis.execute_command(self.MADD_CMD, *params)
 
-    def incrby(self, key, value, timestamp=None, retention_msecs=None,
-                uncompressed=False, labels={}, chunk_size=None):
+    def incrby(self, key, value, **kwargs):
         """
         Increment (or create an time-series and increment) the latest sample's of a series.
         This command can be used as a counter or gauge that automatically gets history as a time series.
@@ -256,6 +299,11 @@ class Client(object): #changed from StrictRedis
             chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
                         You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
         """
+        timestamp = kwargs.get('timestamp', None)
+        retention_msecs = kwargs.get('retention_msecs', None)
+        uncompressed = kwargs.get('uncompressed', False)
+        labels = kwargs.get('labels', {})
+        chunk_size = kwargs.get('chunk_size', None)
         params = [key, value]
         self.appendTimestamp(params, timestamp)
         self.appendRetention(params, retention_msecs)
@@ -265,8 +313,7 @@ class Client(object): #changed from StrictRedis
 
         return self.redis.execute_command(self.INCRBY_CMD, *params)
 
-    def decrby(self, key, value, timestamp=None, retention_msecs=None,
-                uncompressed=False, labels={}, chunk_size=None):
+    def decrby(self, key, value, **kwargs):
         """
         Decrement (or create an time-series and decrement) the latest sample's of a series.
         This command can be used as a counter or gauge that automatically gets history as a time series.
@@ -284,6 +331,11 @@ class Client(object): #changed from StrictRedis
             chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
                         You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
         """
+        timestamp = kwargs.get('timestamp', None)
+        retention_msecs = kwargs.get('retention_msecs', None)
+        uncompressed = kwargs.get('uncompressed', False)
+        labels = kwargs.get('labels', {})
+        chunk_size = kwargs.get('chunk_size', None)
         params = [key, value]
         self.appendTimestamp(params, timestamp)
         self.appendRetention(params, retention_msecs)
