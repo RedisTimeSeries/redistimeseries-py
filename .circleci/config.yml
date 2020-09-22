@@ -18,22 +18,16 @@ commands:
               circleci step halt
             fi
 
-jobs:
-  build:
-    docker:
-      - image: circleci/python:3.7.1
-      - image: redislabs/redistimeseries:edge
-
-    working_directory: ~/repo
-
+  run-tests:
+    parameters:
+      python_version:
+        default: "3.6"
+        type: string
     steps:
       - checkout
-
       - restore_cache: # Download and cache dependencies
           keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+            - v1-dependencies-<<parameters.python_version>>-{{ checksum "requirements.txt" }}
 
       - run:
           name: install dependencies
@@ -42,11 +36,11 @@ jobs:
             . venv/bin/activate
             pip install -r requirements.txt
             pip install codecov
-            
+
       - save_cache:
           paths:
             - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
+          key: v1-dependencies-<<parameters.python_version>>-{{ checksum "requirements.txt" }}
 
       - run:
           name: test dist
@@ -58,90 +52,61 @@ jobs:
             . venv/bin/activate
             REDIS_PORT=6379 coverage run test_commands.py
 
-      - run:
-          name: codecove
-          command: |
-            . venv/bin/activate
-            codecov
-
-  build_latest:
+executors:
+  container_versions: # declares a reusable python executor
+    parameters:
+      python_version:
+        description: "python version tag"
+        default: "3.7.1"
+        type: string
+      redistimeseries_version:
+        default: "edge"
+        type: string
     docker:
-      - image: circleci/python:3.7.1
-      - image: redislabs/redistimeseries:latest
+      - image: circleci/python:<<parameters.python_version>>
+      - image: redislabs/redistimeseries:<<parameters.redistimeseries_version>>
 
+jobs:
+  build:
+    parameters:
+      python_version:
+        default: "3.6"
+        type: string
+      redistimeseries_version:
+        default: "edge"
+        type: string
+    executor:
+      name: container_versions
+      python_version: <<parameters.python_version>>
+      redistimeseries_version: <<parameters.redistimeseries_version>>
     working_directory: ~/repo
-
     steps:
-      - checkout
-
-      - restore_cache: # Download and cache dependencies
-          keys:
-            - v1-dependencies-{{ checksum "requirements.txt" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
-
+      - run-tests:
+        python_version: << parameters.python_version >>
       - run:
-          name: install dependencies
+          name: Run Coverage only for Python3.6
           command: |
-            virtualenv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
-            pip install codecov
-
-      - save_cache:
-          paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
-
-      - run:
-          name: run tests
-          command: |
-            . venv/bin/activate
-            REDIS_PORT=6379 python test_commands.py
-
-  build_edge:
-    docker:
-      - image: circleci/python:3.7.1
-      - image: redislabs/redistimeseries:edge
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout
-
-      - restore_cache: # Download and cache dependencies
-          keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
-      - run:
-          name: install dependencies
-          command: |
-            virtualenv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
-            pip install codecov
-            
-      - save_cache:
-          paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
-
-      - run:
-          name: run tests
-          command: |
-            . venv/bin/activate
-            REDIS_PORT=6379 python test_commands.py
-
-      # no need for store_artifacts on nightly builds 
+            if [ <<parameters.python_version>> = "3.6" ]; then
+              . venv/bin/activate
+              codecov
+            fi
 
 workflows:
   version: 2
   commit:
     jobs:
+      - build:
+          matrix:
+            parameters:
+              python_version:
+                - '2.7'
+                - '3.4'
+                - '3.5'
+                - '3.7'
+                - '3.8'
+                - '3.9.0rc2'
       - build
-      - build_latest
+
   nightly:
     triggers:
       - schedule:
@@ -151,5 +116,14 @@ workflows:
               only:
                 - master
     jobs:
-      - build_edge
-      - build_latest
+      - build:
+          matrix:
+            parameters:
+              python_version:
+                - '2.7'
+                - '3.4'
+                - '3.5'
+                - '3.6'
+                - '3.7'
+                - '3.8'
+                - '3.9.0rc2'
