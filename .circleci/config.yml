@@ -36,6 +36,7 @@ commands:
             . venv/bin/activate
             pip install -r requirements.txt
             pip install codecov
+            pip install wheel
 
       - save_cache:
           paths:
@@ -43,8 +44,12 @@ commands:
           key: v1-dependencies-<<parameters.python_version>>-{{ checksum "requirements.txt" }}
 
       - run:
-          name: test dist
+          name: Create a source distribution
           command: python setup.py sdist
+
+      - run:
+          name: Create a wheel
+          command: python setup.py bdist_wheel
 
       - run:
           name: run tests
@@ -57,7 +62,7 @@ executors:
     parameters:
       python_version:
         description: "python version tag"
-        default: "3.7.1"
+        default: "3.6"
         type: string
       redistimeseries_version:
         default: "edge"
@@ -90,6 +95,37 @@ jobs:
               . venv/bin/activate
               codecov
             fi
+      # Persist the specified paths (dist-<< parameters.python_version >>) into the workspace for use in downstream job. 
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is 
+          # taken to be the root directory of the workspace.
+          root: ~/repo
+          # Must be relative path from root
+          paths:
+            - dist-<< parameters.python_version >>
+  
+  publish-release-pypi:
+    parameters:
+      python_version:
+        default: "2.7"
+        type: string
+    executor:
+      name: container_versions
+      python_version: <<parameters.python_version>>
+    working_directory: ~/repo
+    steps:
+      - attach_workspace:
+          # Must be absolute path or relative path from working_directory
+          at: ~/repo
+
+      - run: |
+          if [ -d dist-<< parameters.python_version >> ]; then
+            echo "It worked!";
+          else
+            echo "Nope!"; exit 1
+          fi
+
+    
 
 workflows:
   version: 2
@@ -105,7 +141,17 @@ workflows:
                 - '3.7'
                 - '3.8'
                 - '3.9.0rc2'
+            name: a
       - build
+      - publish-release-pypi:
+          requires:
+            - build-2.7
+          python_version: "2.7"
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^\d+\.\d+\.\d+$/
 
   nightly:
     triggers:
