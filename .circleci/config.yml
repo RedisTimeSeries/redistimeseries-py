@@ -95,11 +95,15 @@ jobs:
               . venv/bin/activate
               codecov
             fi
+      - run:
+          name: mv dist/* to dist-<<parameters.python_version>>
+          command: |
+            mv dist dist-<<parameters.python_version>>
       # Persist the specified paths (dist-<< parameters.python_version >>) into the workspace for use in downstream job. 
       - persist_to_workspace:
           # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is 
           # taken to be the root directory of the workspace.
-          root: .
+          root: ~/repo
           # Must be relative path from root
           paths:
             - dist-<< parameters.python_version >>
