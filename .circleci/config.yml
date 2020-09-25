@@ -99,7 +99,7 @@ jobs:
       - persist_to_workspace:
           # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is 
           # taken to be the root directory of the workspace.
-          root: /home/circleci
+          root: .
           # Must be relative path from root
           paths:
             - dist-<< parameters.python_version >>
@@ -116,7 +116,7 @@ jobs:
     steps:
       - attach_workspace:
           # Must be absolute path or relative path from working_directory
-          at: /home/circleci
+          at: .
 
       - run: |
           if [ -d dist-<< parameters.python_version >> ]; then
