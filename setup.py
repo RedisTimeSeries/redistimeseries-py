@@ -9,7 +9,7 @@ requirements = list(map(str.strip, open("requirements.txt").readlines()))
 
 setup(
     name='redistimeseries',
-    version='0.8.0',
+    version="1.4.0",
     description='RedisTimeSeries Python Client',
     long_description=read_all("README.md"),
     long_description_content_type='text/markdown',
@@ -19,7 +19,10 @@ setup(
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Database',
         'Topic :: Software Development :: Testing'
     ],
