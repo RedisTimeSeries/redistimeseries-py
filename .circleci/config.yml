@@ -136,6 +136,11 @@ jobs:
           name: Upload with twine to Test PyPI
           command: twine upload -r testpypi dist-<< parameters.python_version >>/*
 
+      # Uncomment me after we've checked that all is working as expected on TestPyPi
+      # - run:
+      #     name: Upload with twine to PyPI
+      #     command: twine upload -r pypi dist-<< parameters.python_version >>/*
+
     
 
 workflows:
@@ -158,6 +163,7 @@ workflows:
           requires:
             - build-2.7
           python_version: "2.7"
+          # Enable the following lines after we've checked that all is working as expected on TestPyPi
           # filters:
           #   branches:
           #     ignore: /.*/
