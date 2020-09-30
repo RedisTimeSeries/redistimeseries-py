@@ -36,6 +36,7 @@ commands:
             . venv/bin/activate
             pip install -r requirements.txt
             pip install codecov
+            pip install wheel
 
       - save_cache:
           paths:
@@ -43,8 +44,12 @@ commands:
           key: v1-dependencies-<<parameters.python_version>>-{{ checksum "requirements.txt" }}
 
       - run:
-          name: test dist
+          name: Create a source distribution
           command: python setup.py sdist
+
+      - run:
+          name: Create a wheel
+          command: python setup.py bdist_wheel
 
       - run:
           name: run tests
@@ -57,7 +62,7 @@ executors:
     parameters:
       python_version:
         description: "python version tag"
-        default: "3.7.1"
+        default: "3.6"
         type: string
       redistimeseries_version:
         default: "edge"
@@ -90,6 +95,53 @@ jobs:
               . venv/bin/activate
               codecov
             fi
+      - run:
+          name: mv dist/* to dist-<<parameters.python_version>>
+          command: |
+            mv dist dist-<<parameters.python_version>>
+
+      # Persist the specified paths (dist-<< parameters.python_version >>) into the workspace for use in downstream job. 
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is 
+          # taken to be the root directory of the workspace.
+          root: ~/repo
+          # Must be relative path from root
+          paths:
+            - dist-<< parameters.python_version >>
+  
+  publish-release-pypi:
+    parameters:
+      python_version:
+        default: "2.7"
+        type: string
+    executor:
+      name: container_versions
+      python_version: <<parameters.python_version>>
+    working_directory: ~/repo
+    steps:
+      - attach_workspace:
+          # Must be absolute path or relative path from working_directory
+          at: .
+
+      - run:
+          name: Install twine
+          command: pip install twine
+
+      - run:
+          name: Create a .pypirc
+          command: |
+            echo -e "[pypi]\nusername = __token__\npassword = $PYPI_TOKEN\n\n[testpypi]\nusername = __token__\npassword = $TESTPYPI_TOKEN\n" >> .pypirc
+
+      - run:
+          name: Upload with twine to Test PyPI
+          command: twine upload -r testpypi dist-<< parameters.python_version >>/*
+
+      # Uncomment me after we've checked that all is working as expected on TestPyPi
+      # - run:
+      #     name: Upload with twine to PyPI
+      #     command: twine upload -r pypi dist-<< parameters.python_version >>/*
+
+    
 
 workflows:
   version: 2
@@ -105,7 +157,18 @@ workflows:
                 - '3.7'
                 - '3.8'
                 - '3.9.0rc2'
+            name: a
       - build
+      - publish-release-pypi:
+          requires:
+            - build-2.7
+          python_version: "2.7"
+          # Enable the following lines after we've checked that all is working as expected on TestPyPi
+          # filters:
+          #   branches:
+          #     ignore: /.*/
+          #   tags:
+          #     only: /^\d+\.\d+\.\d+$/
 
   nightly:
     triggers:
