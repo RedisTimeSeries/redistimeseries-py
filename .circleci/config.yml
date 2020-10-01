@@ -130,7 +130,8 @@ jobs:
       - run:
           name: Create a .pypirc
           command: |
-            echo -e "[pypi]\nusername = __token__\npassword = $PYPI_TOKEN\n\n[testpypi]\nusername = __token__\npassword = $TESTPYPI_TOKEN\n" >> .pypirc
+            rm ~/.pypirc
+            TESTPYPI_TOKEN=$TESTPYPI_TOKEN PYPI_TOKEN=$PYPI_TOKEN  .circleci/create_pypirc.sh
 
       - run:
           name: Upload with twine to Test PyPI
@@ -163,12 +164,11 @@ workflows:
           requires:
             - build-2.7
           python_version: "2.7"
-          # Enable the following lines after we've checked that all is working as expected on TestPyPi
-          # filters:
-          #   branches:
-          #     ignore: /.*/
-          #   tags:
-          #     only: /^\d+\.\d+\.\d+$/
+#           filters:
+#             branches:
+#               ignore: /.*/
+#             tags:
+#               only: /^v\d+\.\d+\.\d+$/
 
   nightly:
     triggers:
