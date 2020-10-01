@@ -130,16 +130,20 @@ jobs:
       - run:
           name: Create a .pypirc
           command: |
-            echo -e "[pypi]\nusername = __token__\npassword = $PYPI_TOKEN\n\n[testpypi]\nusername = __token__\npassword = $TESTPYPI_TOKEN\n" >> .pypirc
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = __token__" >> ~/.pypirc
+            echo -e "password = $PYPI_TOKEN" >> ~/.pypirc
+            echo -e "[testpypi]" >> ~/.pypirc
+            echo -e "username = __token__" >> ~/.pypirc
+            echo -e "password = $TESTPYPI_TOKEN" >> ~/.pypirc
 
       - run:
           name: Upload with twine to Test PyPI
-          command: twine upload -r testpypi dist-<< parameters.python_version >>/*
+          command: twine upload --skip-existing -r testpypi dist-<< parameters.python_version >>/*
 
-      # Uncomment me after we've checked that all is working as expected on TestPyPi
-      # - run:
-      #     name: Upload with twine to PyPI
-      #     command: twine upload -r pypi dist-<< parameters.python_version >>/*
+      - run:
+          name: Upload with twine to PyPI
+          command: twine upload -r pypi dist-<< parameters.python_version >>/*
 
     
 
@@ -163,12 +167,11 @@ workflows:
           requires:
             - build-2.7
           python_version: "2.7"
-          # Enable the following lines after we've checked that all is working as expected on TestPyPi
-          # filters:
-          #   branches:
-          #     ignore: /.*/
-          #   tags:
-          #     only: /^\d+\.\d+\.\d+$/
+          filters:
+           branches:
+             ignore: /.*/
+           tags:
+             only: /^v\d+\.\d+\.\d+$/
 
   nightly:
     triggers:
