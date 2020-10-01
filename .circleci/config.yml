@@ -130,7 +130,6 @@ jobs:
       - run:
           name: Create a .pypirc
           command: |
-            rm ~/.pypirc
             TESTPYPI_TOKEN=$TESTPYPI_TOKEN PYPI_TOKEN=$PYPI_TOKEN  .circleci/create_pypirc.sh
 
       - run:
