@@ -139,12 +139,11 @@ jobs:
 
       - run:
           name: Upload with twine to Test PyPI
-          command: twine upload -r testpypi dist-<< parameters.python_version >>/*
+          command: twine upload --skip-existing -r testpypi dist-<< parameters.python_version >>/*
 
-      # Uncomment me after we've checked that all is working as expected on TestPyPi
-      # - run:
-      #     name: Upload with twine to PyPI
-      #     command: twine upload -r pypi dist-<< parameters.python_version >>/*
+       - run:
+           name: Upload with twine to PyPI
+           command: twine upload -r pypi dist-<< parameters.python_version >>/*
 
     
 
@@ -168,11 +167,11 @@ workflows:
           requires:
             - build-2.7
           python_version: "2.7"
-#           filters:
-#             branches:
-#               ignore: /.*/
-#             tags:
-#               only: /^v\d+\.\d+\.\d+$/
+           filters:
+             branches:
+               ignore: /.*/
+             tags:
+               only: /^v\d+\.\d+\.\d+$/
 
   nightly:
     triggers:
