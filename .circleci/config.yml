@@ -161,17 +161,19 @@ workflows:
                 - '3.7'
                 - '3.8'
                 - '3.9.0rc2'
-            name: a
+            filters:  # required since `publish-release-pypi` has tag filters AND requires `build`
+              tags:
+                only: /.*/
       - build
       - publish-release-pypi:
           requires:
             - build-2.7
           python_version: "2.7"
           filters:
+           tags:
+             only: /^v.*/
            branches:
              ignore: /.*/
-           tags:
-             only: /^v\d+\.\d+\.\d+$/
 
   nightly:
     triggers:
