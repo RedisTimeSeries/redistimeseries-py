@@ -108,44 +108,6 @@ jobs:
           # Must be relative path from root
           paths:
             - dist-<< parameters.python_version >>
-  
-  publish-release-pypi:
-    parameters:
-      python_version:
-        default: "2.7"
-        type: string
-    executor:
-      name: container_versions
-      python_version: <<parameters.python_version>>
-    working_directory: ~/repo
-    steps:
-      - attach_workspace:
-          # Must be absolute path or relative path from working_directory
-          at: .
-
-      - run:
-          name: Install twine
-          command: pip install twine
-
-      - run:
-          name: Create a .pypirc
-          command: |
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = __token__" >> ~/.pypirc
-            echo -e "password = $PYPI_TOKEN" >> ~/.pypirc
-            echo -e "[testpypi]" >> ~/.pypirc
-            echo -e "username = __token__" >> ~/.pypirc
-            echo -e "password = $TESTPYPI_TOKEN" >> ~/.pypirc
-
-      - run:
-          name: Upload with twine to Test PyPI
-          command: twine upload --skip-existing -r testpypi dist-<< parameters.python_version >>/*
-
-      - run:
-          name: Upload with twine to PyPI
-          command: twine upload -r pypi dist-<< parameters.python_version >>/*
-
-    
 
 workflows:
   version: 2
@@ -161,19 +123,10 @@ workflows:
                 - '3.7'
                 - '3.8'
                 - '3.9.0rc2'
-            filters:  # required since `publish-release-pypi` has tag filters AND requires `build`
+            filters:
               tags:
                 only: /.*/
       - build
-      - publish-release-pypi:
-          requires:
-            - build-2.7
-          python_version: "2.7"
-          filters:
-           tags:
-             only: /^v.*/
-           branches:
-             ignore: /.*/
 
   nightly:
     triggers:
