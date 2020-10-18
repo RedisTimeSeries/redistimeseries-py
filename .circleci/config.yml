@@ -32,15 +32,15 @@ commands:
       - run:
           name: install dependencies
           command: |
-            virtualenv venv
-            . venv/bin/activate
+            virtualenv venv-<<parameters.python_version>>
+            . venv-<<parameters.python_version>>/bin/activate
             pip install -r requirements.txt
             pip install codecov
             pip install wheel
 
       - save_cache:
           paths:
-            - ./venv
+            - ./venv-<<parameters.python_version>>
           key: v1-dependencies-<<parameters.python_version>>-{{ checksum "requirements.txt" }}
 
       - run:
@@ -54,7 +54,7 @@ commands:
       - run:
           name: run tests
           command: |
-            . venv/bin/activate
+            . venv-<<parameters.python_version>>/bin/activate
             REDIS_PORT=6379 coverage run test_commands.py
 
 executors:
@@ -92,7 +92,7 @@ jobs:
           name: Run Coverage only for Python3.6
           command: |
             if [ <<parameters.python_version>> = "3.6" ]; then
-              . venv/bin/activate
+              . venv-<<parameters.python_version>>/bin/activate
               codecov
             fi
       - run:
