@@ -21,9 +21,12 @@ class RedisTimeSeriesTest(TestCase):
                 if module_info[1] == b'timeseries':
                     version = int(module_info[3])
 
+    def testVersionRuntime(self):
+        import redistimeseries as rts_pkg
+        self.assertNotEqual("",rts_pkg.__version__)
+
     def testCreate(self):
         '''Test TS.CREATE calls'''
-
         self.assertTrue(rts.create(1))
         self.assertTrue(rts.create(2, retention_msecs=5))
         self.assertTrue(rts.create(3, labels={'Redis':'Labs'}))
