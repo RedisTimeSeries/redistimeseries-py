@@ -21,7 +21,7 @@ The complete documentation of RedisTimeSeries's commands can be found at [RedisT
 
 ## Usage example
 
-```sql
+```python
 # Simple example
 from redistimeseries.client import Client
 rts = Client()
@@ -47,6 +47,24 @@ rts.add('source', '*', 3)
 rts.get('sumRule')
 rts.get('avgRule')
 rts.info('sumRule').__dict__
+```
+
+## Further notes on back-filling time series
+
+Since [RedisTimeSeries 1.4](https://github.com/RedisTimeSeries/RedisTimeSeries/releases/tag/v1.4.5) we've added the ability to back-fill time series, with different duplicate policies. 
+
+The default behavior is to block updates to the same timestamp, and you can control it via the `duplicate_policy` argument. You can check in detail the [duplicate policy documentation](https://oss.redislabs.com/redistimeseries/configuration/#duplicate_policy).
+
+Bellow you can find an example of the `LAST` duplicate policy, in which we override duplicate timestamps with the latest value:
+
+```python
+from redistimeseries.client import Client
+rts = Client()
+rts.create('last-upsert', labels={'Time':'Series'},duplicate_policy='last')
+rts.add('last-upsert', 1, 10.0)
+rts.add('last-upsert', 1, 5.0)
+# should output [(1, 5.0)]
+print(rts.range('last-upsert', 0, -1))
 ```
 
 ## License
