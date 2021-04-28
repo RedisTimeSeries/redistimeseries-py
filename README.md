@@ -60,7 +60,7 @@ Bellow you can find an example of the `LAST` duplicate policy, in which we overr
 ```python
 from redistimeseries.client import Client
 rts = Client()
-rts.create('last-upsert', labels={'Time':'Series'},duplicate_policy='last')
+rts.create('last-upsert', labels={'Time':'Series'}, duplicate_policy='last')
 rts.add('last-upsert', 1, 10.0)
 rts.add('last-upsert', 1, 5.0)
 # should output [(1, 5.0)]
