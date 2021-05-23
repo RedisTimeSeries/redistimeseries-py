@@ -23,5 +23,3 @@ jobs:
             echo "TESTPYPI_TOKEN secret is not set"
             exit 1
           fi
-
-
