@@ -23,6 +23,7 @@ keywords = ["Redis TimeSeries Extension"]
 [tool.poetry.dependencies]
 python = "^3.6"
 redis = "^3.5.3"
+importlib-metadata = "^4.0.1"
 
 
 [tool.poetry.urls]
