@@ -4,7 +4,30 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
+
 commands:
+
+  abort_for_docs:
+    steps:
+      - run:
+          name: Avoid tests for docs
+          command: |
+            if [[ $CIRCLE_BRANCH == *docs ]]; then
+              echo "Identifies as documents PR, no testing required"
+              circleci step halt
+            fi
+
+  abort_for_noci:
+    steps:
+      - run:
+          name: Ignore CI for specific branches
+          command: |
+            if [[ $CIRCLE_BRANCH == *noci ]]; then
+              echo "Identifies as actively ignoring CI, no testing required."
+              circleci step halt
+            fi
+
+
   early_return_for_forked_pull_requests:
     description: >-
       If this build is from a fork, stop executing the current job and return success.
@@ -13,138 +36,102 @@ commands:
       - run:
           name: Early return if this build is from a forked PR
           command: |
-            if [ -n "$CIRCLE_PR_NUMBER" ]; then
+            if [[ -n "$CIRCLE_PR_NUMBER" ]]; then
               echo "Nothing to do for forked PRs, so marking this step successful"
               circleci step halt
             fi
 
-  run-tests:
-    parameters:
-      python_version:
-        default: "3.6"
-        type: string
+  build_and_test:
     steps:
+      - abort_for_docs
+      - abort_for_noci
       - checkout
+
       - restore_cache: # Download and cache dependencies
           keys:
-            - v1-dependencies-<<parameters.python_version>>-{{ checksum "requirements.txt" }}
+          - v1-dependencies-{{ checksum "pyproject.toml" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
 
       - run:
-          name: install dependencies
+          name: install tox dependencies
           command: |
-            virtualenv venv-<<parameters.python_version>>
-            . venv-<<parameters.python_version>>/bin/activate
-            pip install -r requirements.txt
-            pip install codecov
-            pip install wheel
-
-      - save_cache:
-          paths:
-            - ./venv-<<parameters.python_version>>
-          key: v1-dependencies-<<parameters.python_version>>-{{ checksum "requirements.txt" }}
+            pip install --user --quiet -r .circleci/circle_requirements.txt
 
       - run:
-          name: Create a source distribution
-          command: python setup.py sdist
+          name: build sdist and wheels
+          command: |
+            poetry build
 
       - run:
-          name: Create a wheel
-          command: python setup.py bdist_wheel
+          name: lint
+          command: |
+            tox -e linters
 
       - run:
           name: run tests
-          command: |
-            . venv-<<parameters.python_version>>/bin/activate
-            REDIS_PORT=6379 coverage run test_commands.py
+          command:
+            tox -e cover
 
-executors:
-  container_versions: # declares a reusable python executor
-    parameters:
-      python_version:
-        description: "python version tag"
-        default: "3.6"
-        type: string
-      redistimeseries_version:
-        default: "edge"
-        type: string
-    docker:
-      - image: circleci/python:<<parameters.python_version>>
-      - image: redislabs/redistimeseries:<<parameters.redistimeseries_version>>
+      - save_cache:
+          paths:
+            - ./.tox
+            - ~/.cache/pip
+          key: v1-dependencies-{{ checksum "pyproject.toml" }}
+
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports
+
 
 jobs:
   build:
     parameters:
       python_version:
-        default: "3.6"
         type: string
-      redistimeseries_version:
-        default: "edge"
-        type: string
-    executor:
-      name: container_versions
-      python_version: <<parameters.python_version>>
-      redistimeseries_version: <<parameters.redistimeseries_version>>
-    working_directory: ~/repo
+        default: "latest"
+    docker:
+      - image: circleci/python:<<parameters.python_version>>
+      - image: redislabs/redistimeseries:edge
     steps:
-      - run-tests:
-          python_version: << parameters.python_version >>
-      - run:
-          name: Run Coverage only for Python3.6
-          command: |
-            if [ <<parameters.python_version>> = "3.6" ]; then
-              . venv-<<parameters.python_version>>/bin/activate
-              codecov
-            fi
-      - run:
-          name: mv dist/* to dist-<<parameters.python_version>>
-          command: |
-            mv dist dist-<<parameters.python_version>>
+      - build_and_test
 
-      # Persist the specified paths (dist-<< parameters.python_version >>) into the workspace for use in downstream job. 
-      - persist_to_workspace:
-          # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is 
-          # taken to be the root directory of the workspace.
-          root: ~/repo
-          # Must be relative path from root
-          paths:
-            - dist-<< parameters.python_version >>
+on-any-branch: &on-any-branch
+  filters:
+    branches:
+      only:
+        - /.*/
+    tags:
+      ignore: /.*/
+
+on-master: &on-master
+  filters:
+    branches:
+      only:
+        - master
+
+# the is to build and test, per commit against all supported python versions
+python-versions: &python-versions
+  matrix:
+    parameters:
+      python_version:
+        - "3.6.9"
+        - "3.7.9"
+        - "3.8.9"
+        - "3.9.4"
+        - "latest"
 
 workflows:
-  version: 2
   commit:
     jobs:
       - build:
-          matrix:
-            parameters:
-              python_version:
-                - '2.7'
-                - '3.4'
-                - '3.5'
-                - '3.7'
-                - '3.8'
-                - '3.9.0rc2'
-            filters:
-              tags:
-                only: /.*/
-      - build
+         <<: *on-any-branch
+         <<: *python-versions
 
   nightly:
     triggers:
       - schedule:
           cron: "0 0 * * *"
-          filters:
-            branches:
-              only:
-                - master
+          <<: *on-master
     jobs:
-      - build:
-          matrix:
-            parameters:
-              python_version:
-                - '2.7'
-                - '3.4'
-                - '3.5'
-                - '3.6'
-                - '3.7'
-                - '3.8'
-                - '3.9.0rc2'
+      - build

@@ -4,17 +4,31 @@
 [![GitHub issues](https://img.shields.io/github/release/RedisTimeSeries/redistimeseries-py.svg)](https://github.com/RedisTimeSeries/redistimeseries-py/releases/latest)
 [![Codecov](https://codecov.io/gh/RedisTimeSeries/redistimeseries-py/branch/master/graph/badge.svg)](https://codecov.io/gh/RedisTimeSeries/redistimeseries-py)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/RedisTimeSeries/redistimeseries-py.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/RedisTimeSeries/redistimeseries-py/context:python)
+[![Known Vulnerabilities](https://snyk.io/test/github/RedisTimeSeries/redistimeseries-py/badge.svg?targetFile=pyproject.toml)](https://snyk.io/test/github/RedisTimeSeries/redistimeseries-py?targetFile=pyproject.toml)
 
 # redistimeseries-py
 [![Forum](https://img.shields.io/badge/Forum-RedisTimeSeries-blue)](https://forum.redislabs.com/c/modules/redistimeseries)
 [![Discord](https://img.shields.io/discord/697882427875393627?style=flat-square)](https://discord.gg/KExRgMb)
 
-redistimeseries-py is a package that gives developers easy access to RedisTimeSeries module. The package extends [redis-py](https://github.com/andymccurdy/redis-py)'s interface with RedisTimeSeries's API.  
+redistimeseries-py is a package that gives developers easy access to RedisTimeSeries module. The package extends [redis-py](https://github.com/andymccurdy/redis-py)'s interface with RedisTimeSeries's API.
 
 ## Installation
-``` 
+```
 $ pip install redistimeseries
 ```
+
+## Development
+
+1. Create a virtualenv to manage your python dependencies, and ensure it's active.
+   ```virtualenv -v venv```
+2. Install [pypoetry](https://python-poetry.org/) to manage your dependencies.
+   ```pip install --user poetry```
+3. Install dependencies.
+   ```poetry install```
+
+[tox](https://tox.readthedocs.io/en/latest/) runs all tests as its default target. Running *tox* by itself will run unit tests. Ensure you have a running redis, with the module loaded.
+
+
 
 ## API
 The complete documentation of RedisTimeSeries's commands can be found at [RedisTimeSeries's website](http://redistimeseries.io/).
@@ -28,8 +42,8 @@ rts = Client()
 rts.create('test', labels={'Time':'Series'})
 rts.add('test', 1, 1.12)
 rts.add('test', 2, 1.12)
-rts.get('test')                                  
-rts.incrby('test',1)                               
+rts.get('test')
+rts.incrby('test',1)
 rts.range('test', 0, -1)
 rts.range('test', 0, -1, aggregation_type='avg', bucket_size_msec=10)
 rts.range('test', 0, -1, aggregation_type='sum', bucket_size_msec=10)
@@ -51,7 +65,7 @@ rts.info('sumRule').__dict__
 
 ## Further notes on back-filling time series
 
-Since [RedisTimeSeries 1.4](https://github.com/RedisTimeSeries/RedisTimeSeries/releases/tag/v1.4.5) we've added the ability to back-fill time series, with different duplicate policies. 
+Since [RedisTimeSeries 1.4](https://github.com/RedisTimeSeries/RedisTimeSeries/releases/tag/v1.4.5) we've added the ability to back-fill time series, with different duplicate policies.
 
 The default behavior is to block updates to the same timestamp, and you can control it via the `duplicate_policy` argument. You can check in detail the [duplicate policy documentation](https://oss.redislabs.com/redistimeseries/configuration/#duplicate_policy).
 
