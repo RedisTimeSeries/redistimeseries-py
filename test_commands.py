@@ -191,7 +191,7 @@ class RedisTimeSeriesTest(TestCase):
         #last sample isn't returned
         self.assertEqual(20, len(rts.range(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
         self.assertEqual(10, len(rts.range(1, 0, 500, count=10)))
-        self.assertEqual(2, len(rts.range(1, 0, 500, filter_by_ts=[i for i in range(10, 20)], filter_by_value=(1, 2))))
+        self.assertEqual(2, len(rts.range(1, 0, 500, filter_by_ts=[i for i in range(10, 20)], filter_by_min_value=1, filter_by_max_value=2)))
 
     def testRevRange(self):
         '''Test TS.REVRANGE calls which returns reverse range by key'''
@@ -208,7 +208,7 @@ class RedisTimeSeriesTest(TestCase):
         #first sample isn't returned
         self.assertEqual(20, len(rts.revrange(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
         self.assertEqual(10, len(rts.revrange(1, 0, 500, count=10)))
-        self.assertEqual(2, len(rts.revrange(1, 0, 500, filter_by_ts=[i for i in range(10, 20)], filter_by_value=(1, 2))))
+        self.assertEqual(2, len(rts.revrange(1, 0, 500, filter_by_ts=[i for i in range(10, 20)], filter_by_min_value=1, filter_by_max_value=2)))
 
     def testMultiRange(self):
         '''Test TS.MRANGE calls which returns range by filter'''
@@ -237,7 +237,7 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual({}, res[0]['1'][0])
         res = rts.mrange(0, 200, filters=['Test=This'], with_labels=True)
         self.assertEqual({'Test': 'This'}, res[0]['1'][0])
-        res = rts.mrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)], filter_by_value=(1, 2))
+        res = rts.mrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)], filter_by_min_value=1, filter_by_max_value=2)
         self.assertEqual([(15, 1.0), (16, 2.0)], res[0]['1'][1])
 
     def testMultiReverseRange(self):
@@ -270,7 +270,8 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual({}, res[0]['1'][0])
         res = rts.mrevrange(0, 200, filters=['Test=This'], with_labels=True)
         self.assertEqual({'Test': 'This'}, res[0]['1'][0])
-        res = rts.mrevrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)], filter_by_value=(1, 2))
+        res = rts.mrevrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)],
+                            filter_by_min_value=1, filter_by_max_value=2)
         self.assertEqual([(16, 2.0), (15, 1.0)], res[0]['1'][1])
 
     def testGet(self):

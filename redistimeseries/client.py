@@ -373,15 +373,13 @@ class Client(object): #changed from StrictRedis
         return self.redis.execute_command(self.DELETERULE_CMD, source_key, dest_key)
 
     def __range_params(self, key, from_time, to_time, count, aggregation_type, bucket_size_msec,
-                       filter_by_ts, filter_by_value):
+                       filter_by_ts, filter_by_min_value, filter_by_max_value):
         """
         Internal method to create TS.RANGE and TS.REVRANGE arguments
         """
         params = [key, from_time, to_time]
-        if filter_by_ts is not None:
-            self.appendFilerByTs(params, filter_by_ts)
-        if filter_by_value is not None:
-            self.appendFilerByValue(params, filter_by_value[0], filter_by_value[1])
+        self.appendFilerByTs(params, filter_by_ts)
+        self.appendFilerByValue(params, filter_by_min_value, filter_by_max_value)
         self.appendCount(params, count)
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
@@ -389,7 +387,8 @@ class Client(object): #changed from StrictRedis
         return params
 
     def range(self, key, from_time, to_time, count=None,
-                aggregation_type=None, bucket_size_msec=0, filter_by_ts=None, filter_by_value=None):
+                aggregation_type=None, bucket_size_msec=0,
+                filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None):
         """
         Query a range in forward direction for a specific time-serie.
 
@@ -402,14 +401,16 @@ class Client(object): #changed from StrictRedis
             'first', 'last', 'std.p', 'std.s', 'var.p', 'var.s']
             bucket_size_msec: Time bucket for aggregation in milliseconds.
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
-            filter_by_value: Filter result by value using minimum and maximum.
+            filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
+            filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
         """
         params = self.__range_params(key, from_time, to_time, count, aggregation_type, bucket_size_msec,
-                                     filter_by_ts, filter_by_value)
+                                     filter_by_ts, filter_by_min_value, filter_by_max_value)
         return self.redis.execute_command(self.RANGE_CMD, *params)
 
     def revrange(self, key, from_time, to_time, count=None,
-              aggregation_type=None, bucket_size_msec=0, filter_by_ts=None, filter_by_value=None):
+                    aggregation_type=None, bucket_size_msec=0,
+                    filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None):
         """
         Query a range in reverse direction for a specific time-serie.
         Note: This command is only available since RedisTimeSeries >= v1.4
@@ -423,22 +424,21 @@ class Client(object): #changed from StrictRedis
             'first', 'last', 'std.p', 'std.s', 'var.p', 'var.s']
             bucket_size_msec: Time bucket for aggregation in milliseconds.
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
-            filter_by_value: Filter result by value using minimum and maximum.
+            filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
+            filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
         """
         params = self.__range_params(key, from_time, to_time, count, aggregation_type, bucket_size_msec,
-                                     filter_by_ts, filter_by_value)
+                                     filter_by_ts, filter_by_min_value, filter_by_max_value)
         return self.redis.execute_command(self.REVRANGE_CMD, *params)
 
     def __mrange_params(self, aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
-                        with_labels, filter_by_ts, filter_by_value):
+                        with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value):
         """
         Internal method to create TS.MRANGE and TS.MREVRANGE arguments
         """
         params = [from_time, to_time]
-        if filter_by_ts is not None:
-            self.appendFilerByTs(params, filter_by_ts)
-        if filter_by_value is not None:
-            self.appendFilerByValue(params, filter_by_value[0], filter_by_value[1])
+        self.appendFilerByTs(params, filter_by_ts)
+        self.appendFilerByValue(params, filter_by_min_value, filter_by_max_value)
         self.appendCount(params, count)
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
@@ -447,8 +447,8 @@ class Client(object): #changed from StrictRedis
         params += filters
         return params
 
-    def mrange(self, from_time, to_time, filters, count=None, aggregation_type=None,
-               bucket_size_msec=0, with_labels=False, filter_by_ts=None, filter_by_value=None):
+    def mrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
+               with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None):
         """
         Query a range across multiple time-series by filters in forward direction.
 
@@ -463,14 +463,15 @@ class Client(object): #changed from StrictRedis
             with_labels:  Include in the reply the label-value pairs that represent metadata labels of the time-series.
             If this argument is not set, by default, an empty Array will be replied on the labels array position.
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
-            filter_by_value: Filter result by value using minimum and maximum.
+            filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
+            filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
-                                      with_labels, filter_by_ts, filter_by_value)
+                                      with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value)
         return self.redis.execute_command(self.MRANGE_CMD, *params)
 
-    def mrevrange(self, from_time, to_time, filters, count=None, aggregation_type=None,
-                  bucket_size_msec=0, with_labels=False, filter_by_ts=None, filter_by_value=None):
+    def mrevrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
+                  with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None):
         """
         Query a range across multiple time-series by filters in reverse direction.
 
@@ -485,10 +486,11 @@ class Client(object): #changed from StrictRedis
             with_labels:  Include in the reply the label-value pairs that represent metadata labels of the time-series.
             If this argument is not set, by default, an empty Array will be replied on the labels array position.
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
-            filter_by_value: Filter result by value using minimum and maximum.
+            filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
+            filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
-                                      with_labels, filter_by_ts, filter_by_value)
+                                      with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value)
         return self.redis.execute_command(self.MREVRANGE_CMD, *params)
 
     def get(self, key):
