@@ -1,8 +1,3 @@
-
-# Python CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-python/ for more details
-#
 version: 2.1
 
 commands:
@@ -92,7 +87,8 @@ jobs:
         default: "latest"
     docker:
       - image: circleci/python:<<parameters.python_version>>
-      - image: redislabs/redistimeseries:edge
+      # - image: redislabs/redistimeseries:edge
+      - image: redisfab/redistimeseries:master-x64-bionic
     steps:
       - build_and_test
 
