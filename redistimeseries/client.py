@@ -136,6 +136,11 @@ class Client(object): #changed from StrictRedis
             params.extend(['WITHLABELS'])
 
     @staticmethod
+    def appendGroupbyReduce(params, groupby, reduce):
+        if groupby and reduce:
+            params.extend(['GROUPBY', groupby, 'REDUCE', reduce.upper()])
+
+    @staticmethod
     def appendRetention(params, retention):
         if retention is not None:
             params.extend(['RETENTION', retention])
@@ -432,7 +437,8 @@ class Client(object): #changed from StrictRedis
         return self.redis.execute_command(self.REVRANGE_CMD, *params)
 
     def __mrange_params(self, aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
-                        with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value):
+                        with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value, groupby,
+                        reduce):
         """
         Internal method to create TS.MRANGE and TS.MREVRANGE arguments
         """
@@ -443,12 +449,14 @@ class Client(object): #changed from StrictRedis
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
         self.appendWithLabels(params, with_labels)
+        self.appendGroupbyReduce(params, groupby, reduce)
         params.extend(['FILTER'])
         params += filters
         return params
 
     def mrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
-               with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None):
+               with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None,
+               groupby=None, reduce=None):
         """
         Query a range across multiple time-series by filters in forward direction.
 
@@ -465,13 +473,17 @@ class Client(object): #changed from StrictRedis
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
             filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
             filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
+            groupby: Grouping by fields the results (must mention also reduce).
+            reduce: Applying reducer functions on each group. Can be one of ['sum', 'min', 'max'].
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
-                                      with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value)
+                                      with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value,
+                                      groupby, reduce)
         return self.redis.execute_command(self.MRANGE_CMD, *params)
 
     def mrevrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
-                  with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None):
+                  with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None,
+                  groupby=None, reduce=None):
         """
         Query a range across multiple time-series by filters in reverse direction.
 
@@ -488,9 +500,12 @@ class Client(object): #changed from StrictRedis
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
             filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
             filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
+            groupby: Grouping by fields the results (must mention also reduce).
+            reduce: Applying reducer functions on each group. Can be one of ['sum', 'min', 'max'].
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
-                                      with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value)
+                                      with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value,
+                                      groupby, reduce)
         return self.redis.execute_command(self.MREVRANGE_CMD, *params)
 
     def get(self, key):
