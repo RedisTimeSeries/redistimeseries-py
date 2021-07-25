@@ -90,6 +90,7 @@ class Client(object): #changed from StrictRedis
     MADD_CMD = 'TS.MADD'
     INCRBY_CMD = 'TS.INCRBY'
     DECRBY_CMD = 'TS.DECRBY'
+    DEL_CMD = 'TS.DEL'
     CREATERULE_CMD = 'TS.CREATERULE'
     DELETERULE_CMD = 'TS.DELETERULE'
     RANGE_CMD = 'TS.RANGE'
@@ -111,6 +112,7 @@ class Client(object): #changed from StrictRedis
         MODULE_CALLBACKS = {
             self.CREATE_CMD : bool_ok,
             self.ALTER_CMD : bool_ok,
+            self.DEL_CMD : bool_ok,
             self.CREATERULE_CMD : bool_ok,
             self.DELETERULE_CMD : bool_ok,
             self.RANGE_CMD : parse_range,
@@ -306,7 +308,7 @@ class Client(object): #changed from StrictRedis
                         Adding this flag will keep data in an uncompressed form. Compression not only saves
                         memory but usually improve performance due to lower number of memory accesses
             labels: Set of label-value pairs that represent metadata labels of the key.
-            chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
+            chunk_size: Each time-series uses chunks of memory of fixed size for time series samples.
                         You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
         """
         timestamp = kwargs.get('timestamp', None)
@@ -354,6 +356,17 @@ class Client(object): #changed from StrictRedis
         self.appendLabels(params, labels)
         
         return self.redis.execute_command(self.DECRBY_CMD, *params)
+
+    def delrange(self, key, from_time, to_time):
+        """
+        Delete data points for a given timeseries and interval range in the form of start and end delete timestamps.
+        The given timestamp interval is closed (inclusive), meaning start and end data points will also be deleted.
+        Args:
+            key: time-series key.
+            from_time: Start timestamp for the range deletion.
+            to_time: End timestamp for the range deletion.
+        """
+        return self.redis.execute_command(self.DEL_CMD, key, from_time, to_time)
 
     def createrule(self, source_key, dest_key, 
                      aggregation_type, bucket_size_msec):
