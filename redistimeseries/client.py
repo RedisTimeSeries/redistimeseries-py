@@ -449,9 +449,9 @@ class Client(object): #changed from StrictRedis
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
         self.appendWithLabels(params, with_labels)
-        self.appendGroupbyReduce(params, groupby, reduce)
         params.extend(['FILTER'])
         params += filters
+        self.appendGroupbyReduce(params, groupby, reduce)
         return params
 
     def mrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
