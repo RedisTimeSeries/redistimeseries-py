@@ -158,6 +158,20 @@ class RedisTimeSeriesTest(TestCase):
         info = rts.info("time-serie-2")
         self.assertEqual(128, info.chunk_size)
 
+    def testDelRange(self):
+        '''Test TS.DEL calls'''
+
+        try:
+            rts.delrange('test', 0, 100)
+        except Exception as e:
+            self.assertEqual("TSDB: the key does not exist", e.__str__())
+
+        for i in range(100):
+            rts.add(1, i, i % 7)
+        self.assertTrue(rts.delrange(1, 0, 21))
+        self.assertEqual([], rts.range(1, 0, 21))
+        self.assertEqual([(22, 1.0)], rts.range(1, 22, 22))
+
     def testCreateRule(self):
         '''Test TS.CREATERULE and TS.DELETERULE calls'''
 
