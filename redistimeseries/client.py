@@ -361,6 +361,7 @@ class Client(object): #changed from StrictRedis
         """
         Delete data points for a given timeseries and interval range in the form of start and end delete timestamps.
         The given timestamp interval is closed (inclusive), meaning start and end data points will also be deleted.
+
         Args:
             key: time-series key.
             from_time: Start timestamp for the range deletion.
