@@ -213,8 +213,8 @@ class RedisTimeSeriesTest(TestCase):
     def testMultiRange(self):
         '''Test TS.MRANGE calls which returns range by filter'''
 
-        rts.create(1, labels={'Test':'This'})
-        rts.create(2, labels={'Test':'This', 'Taste':'That'})
+        rts.create(1, labels={'Test': 'This', 'team': 'ny'})
+        rts.create(2, labels={'Test': 'This', 'Taste': 'That', 'team': 'sf'})
         for i in range(100):
             rts.add(1, i, i % 7)
             rts.add(2, i, i % 11)
@@ -233,11 +233,17 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(2, len(res))
         self.assertEqual(20, len(res[0]['1'][1]))
         
-        #test withlabels
+        # test withlabels
         self.assertEqual({}, res[0]['1'][0])
         res = rts.mrange(0, 200, filters=['Test=This'], with_labels=True)
-        self.assertEqual({'Test': 'This'}, res[0]['1'][0])
-        res = rts.mrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)], filter_by_min_value=1, filter_by_max_value=2)
+        self.assertEqual({'Test': 'This', 'team': 'ny'}, res[0]['1'][0])
+        # test with selected labels
+        res = rts.mrange(0, 200, filters=['Test=This'], select_labels=['team'])
+        self.assertEqual({'team': 'ny'}, res[0]['1'][0])
+        self.assertEqual({'team': 'sf'}, res[1]['2'][0])
+        # test with filterby
+        res = rts.mrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)],
+                         filter_by_min_value=1, filter_by_max_value=2)
         self.assertEqual([(15, 1.0), (16, 2.0)], res[0]['1'][1])
 
     def testMultiReverseRange(self):
@@ -246,8 +252,8 @@ class RedisTimeSeriesTest(TestCase):
         if version is None or version < 14000:
             return
 
-        rts.create(1, labels={'Test': 'This'})
-        rts.create(2, labels={'Test': 'This', 'Taste': 'That'})
+        rts.create(1, labels={'Test': 'This', 'team': 'ny'})
+        rts.create(2, labels={'Test': 'This', 'Taste': 'That', 'team': 'sf'})
         for i in range(100):
             rts.add(1, i, i % 7)
             rts.add(2, i, i % 11)
@@ -269,7 +275,12 @@ class RedisTimeSeriesTest(TestCase):
         # test withlabels
         self.assertEqual({}, res[0]['1'][0])
         res = rts.mrevrange(0, 200, filters=['Test=This'], with_labels=True)
-        self.assertEqual({'Test': 'This'}, res[0]['1'][0])
+        self.assertEqual({'Test': 'This', 'team': 'ny'}, res[0]['1'][0])
+        # test with selected labels
+        res = rts.mrevrange(0, 200, filters=['Test=This'], select_labels=['team'])
+        self.assertEqual({'team': 'ny'}, res[0]['1'][0])
+        self.assertEqual({'team': 'sf'}, res[1]['2'][0])
+        # test filterby
         res = rts.mrevrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)],
                             filter_by_min_value=1, filter_by_max_value=2)
         self.assertEqual([(16, 2.0), (15, 1.0)], res[0]['1'][1])
