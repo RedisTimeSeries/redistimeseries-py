@@ -237,7 +237,11 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual({}, res[0]['1'][0])
         res = rts.mrange(0, 200, filters=['Test=This'], with_labels=True)
         self.assertEqual({'Test': 'This', 'team': 'ny'}, res[0]['1'][0])
-        # test filterby
+        # test with selected labels
+        res = rts.mrange(0, 200, filters=['Test=This'], select_labels=['team'])
+        self.assertEqual({'team': 'ny'}, res[0]['1'][0])
+        self.assertEqual({'team': 'sf'}, res[1]['2'][0])
+        # test with filterby
         res = rts.mrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)],
                          filter_by_min_value=1, filter_by_max_value=2)
         self.assertEqual([(15, 1.0), (16, 2.0)], res[0]['1'][1])
@@ -281,6 +285,10 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual({}, res[0]['1'][0])
         res = rts.mrevrange(0, 200, filters=['Test=This'], with_labels=True)
         self.assertEqual({'Test': 'This', 'team': 'ny'}, res[0]['1'][0])
+        # test with selected labels
+        res = rts.mrevrange(0, 200, filters=['Test=This'], select_labels=['team'])
+        self.assertEqual({'team': 'ny'}, res[0]['1'][0])
+        self.assertEqual({'team': 'sf'}, res[1]['2'][0])
         # test filterby
         res = rts.mrevrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)],
                             filter_by_min_value=1, filter_by_max_value=2)
