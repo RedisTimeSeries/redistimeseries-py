@@ -89,6 +89,7 @@ class Client(object): #changed from StrictRedis
     MADD_CMD = 'TS.MADD'
     INCRBY_CMD = 'TS.INCRBY'
     DECRBY_CMD = 'TS.DECRBY'
+    DEL_CMD = 'TS.DEL'
     CREATERULE_CMD = 'TS.CREATERULE'
     DELETERULE_CMD = 'TS.DELETERULE'
     RANGE_CMD = 'TS.RANGE'
@@ -110,6 +111,7 @@ class Client(object): #changed from StrictRedis
         MODULE_CALLBACKS = {
             self.CREATE_CMD : bool_ok,
             self.ALTER_CMD : bool_ok,
+            self.DEL_CMD : bool_ok,
             self.CREATERULE_CMD : bool_ok,
             self.DELETERULE_CMD : bool_ok,
             self.RANGE_CMD : parse_range,
@@ -138,6 +140,11 @@ class Client(object): #changed from StrictRedis
             params.extend(['WITHLABELS'])
         if select_labels:
             params.extend(['SELECTED_LABELS', *select_labels])
+
+    @staticmethod
+    def appendGroupbyReduce(params, groupby, reduce):
+        if groupby is not None and reduce is not None:
+            params.extend(['GROUPBY', groupby, 'REDUCE', reduce.upper()])
 
     @staticmethod
     def appendRetention(params, retention):
@@ -310,7 +317,7 @@ class Client(object): #changed from StrictRedis
                         Adding this flag will keep data in an uncompressed form. Compression not only saves
                         memory but usually improve performance due to lower number of memory accesses
             labels: Set of label-value pairs that represent metadata labels of the key.
-            chunk_size: Each time-serie uses chunks of memory of fixed size for time series samples.
+            chunk_size: Each time-series uses chunks of memory of fixed size for time series samples.
                         You can alter the default TSDB chunk size by passing the chunk_size argument (in Bytes).
         """
         timestamp = kwargs.get('timestamp', None)
@@ -358,6 +365,18 @@ class Client(object): #changed from StrictRedis
         self.appendLabels(params, labels)
         
         return self.redis.execute_command(self.DECRBY_CMD, *params)
+
+    def delrange(self, key, from_time, to_time):
+        """
+        Delete data points for a given timeseries and interval range in the form of start and end delete timestamps.
+        The given timestamp interval is closed (inclusive), meaning start and end data points will also be deleted.
+
+        Args:
+            key: time-series key.
+            from_time: Start timestamp for the range deletion.
+            to_time: End timestamp for the range deletion.
+        """
+        return self.redis.execute_command(self.DEL_CMD, key, from_time, to_time)
 
     def createrule(self, source_key, dest_key, 
                      aggregation_type, bucket_size_msec):
@@ -436,7 +455,8 @@ class Client(object): #changed from StrictRedis
         return self.redis.execute_command(self.REVRANGE_CMD, *params)
 
     def __mrange_params(self, aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
-                        with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value, select_labels):
+                        with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value, groupby,
+                        reduce, select_labels):
         """
         Internal method to create TS.MRANGE and TS.MREVRANGE arguments
         """
@@ -449,11 +469,12 @@ class Client(object): #changed from StrictRedis
         self.appendWithLabels(params, with_labels, select_labels)
         params.extend(['FILTER'])
         params += filters
+        self.appendGroupbyReduce(params, groupby, reduce)
         return params
 
     def mrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
                with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None,
-               select_labels=None):
+               groupby=None, reduce=None, select_labels=None):
         """
         Query a range across multiple time-series by filters in forward direction.
 
@@ -470,16 +491,19 @@ class Client(object): #changed from StrictRedis
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
             filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
             filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
+            groupby: Grouping by fields the results (must mention also reduce).
+            reduce: Applying reducer functions on each group. Can be one of ['sum', 'min', 'max'].
             select_labels: Include in the reply only a subset of the key-value pair labels of a series.
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
                                       with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value,
-                                      select_labels)
+                                      groupby, reduce, select_labels)
+        
         return self.redis.execute_command(self.MRANGE_CMD, *params)
 
     def mrevrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
                   with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None,
-                  select_labels=None):
+                  groupby=None, reduce=None, select_labels=None):
         """
         Query a range across multiple time-series by filters in reverse direction.
 
@@ -496,11 +520,14 @@ class Client(object): #changed from StrictRedis
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
             filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
             filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
+            groupby: Grouping by fields the results (must mention also reduce).
+            reduce: Applying reducer functions on each group. Can be one of ['sum', 'min', 'max'].
             select_labels: Include in the reply only a subset of the key-value pair labels of a series.
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
                                       with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value,
-                                      select_labels)
+                                      groupby, reduce, select_labels)
+
         return self.redis.execute_command(self.MREVRANGE_CMD, *params)
 
     def get(self, key):

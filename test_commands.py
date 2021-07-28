@@ -158,6 +158,20 @@ class RedisTimeSeriesTest(TestCase):
         info = rts.info("time-serie-2")
         self.assertEqual(128, info.chunk_size)
 
+    def testDelRange(self):
+        '''Test TS.DEL calls'''
+
+        try:
+            rts.delrange('test', 0, 100)
+        except Exception as e:
+            self.assertEqual("TSDB: the key does not exist", e.__str__())
+
+        for i in range(100):
+            rts.add(1, i, i % 7)
+        self.assertTrue(rts.delrange(1, 0, 21))
+        self.assertEqual([], rts.range(1, 0, 21))
+        self.assertEqual([(22, 1.0)], rts.range(1, 22, 22))
+
     def testCreateRule(self):
         '''Test TS.CREATERULE and TS.DELETERULE calls'''
 
@@ -222,14 +236,14 @@ class RedisTimeSeriesTest(TestCase):
         res = rts.mrange(0, 200, filters=['Test=This'])
         self.assertEqual(2, len(res))
         self.assertEqual(100, len(res[0]['1'][1]))
-        
+
         res = rts.mrange(0, 200, filters=['Test=This'], count=10)
         self.assertEqual(10, len(res[0]['1'][1]))
 
         for i in range(100):
             rts.add(1, i+200, i % 7)
         res = rts.mrange(0, 500, filters=['Test=This'],
-                        aggregation_type='avg', bucket_size_msec=10)
+                         aggregation_type='avg', bucket_size_msec=10)
         self.assertEqual(2, len(res))
         self.assertEqual(20, len(res[0]['1'][1]))
         
@@ -245,6 +259,15 @@ class RedisTimeSeriesTest(TestCase):
         res = rts.mrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)],
                          filter_by_min_value=1, filter_by_max_value=2)
         self.assertEqual([(15, 1.0), (16, 2.0)], res[0]['1'][1])
+        # test groupby
+        res = rts.mrange(0, 3, filters=['Test=This'], groupby='Test', reduce='sum')
+        self.assertEqual([(0, 0.0), (1, 2.0), (2, 4.0), (3, 6.0)], res[0]['Test=This'][1])
+        res = rts.mrange(0, 3, filters=['Test=This'], groupby='Test', reduce='max')
+        self.assertEqual([(0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)], res[0]['Test=This'][1])
+        res = rts.mrange(0, 3, filters=['Test=This'], groupby='team', reduce='min')
+        self.assertEqual(2, len(res))
+        self.assertEqual([(0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)], res[0]['team=ny'][1])
+        self.assertEqual([(0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)], res[1]['team=sf'][1])
 
     def testMultiReverseRange(self):
         '''Test TS.MREVRANGE calls which returns range by filter'''
@@ -284,6 +307,15 @@ class RedisTimeSeriesTest(TestCase):
         res = rts.mrevrange(0, 200, filters=['Test=This'], filter_by_ts=[i for i in range(10, 20)],
                             filter_by_min_value=1, filter_by_max_value=2)
         self.assertEqual([(16, 2.0), (15, 1.0)], res[0]['1'][1])
+        # test groupby
+        res = rts.mrevrange(0, 3, filters=['Test=This'], groupby='Test', reduce='sum')
+        self.assertEqual([(3, 6.0), (2, 4.0), (1, 2.0), (0, 0.0)], res[0]['Test=This'][1])
+        res = rts.mrevrange(0, 3, filters=['Test=This'], groupby='Test', reduce='max')
+        self.assertEqual([(3, 3.0), (2, 2.0),  (1, 1.0), (0, 0.0)], res[0]['Test=This'][1])
+        res = rts.mrevrange(0, 3, filters=['Test=This'], groupby='team', reduce='min')
+        self.assertEqual(2, len(res))
+        self.assertEqual([(3, 3.0), (2, 2.0),  (1, 1.0), (0, 0.0)], res[0]['team=ny'][1])
+        self.assertEqual([(3, 3.0), (2, 2.0),  (1, 1.0), (0, 0.0)], res[1]['team=sf'][1])
 
     def testGet(self):
         '''Test TS.GET calls'''
