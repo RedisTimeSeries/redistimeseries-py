@@ -169,6 +169,11 @@ class Client(object): #changed from StrictRedis
             params.extend(['TIMESTAMP', timestamp])
 
     @staticmethod
+    def appendAlign(params, align):
+        if align is not None:
+            params.extend(['ALIGN', align])
+
+    @staticmethod
     def appendAggregation(params, aggregation_type,
                           bucket_size_msec):
         params.append('AGGREGATION')
@@ -386,7 +391,7 @@ class Client(object): #changed from StrictRedis
         ``aggregation_type`` can be ['avg', 'sum', 'min', 'max',
         'range', 'count', 'first', 'last', 'std.p', 'std.s', 'var.p', 'var.s']
         """
-        params=[source_key, dest_key]
+        params = [source_key, dest_key]
         self.appendAggregation(params, aggregation_type, bucket_size_msec)
 
         return self.redis.execute_command(self.CREATERULE_CMD, *params)
@@ -396,7 +401,7 @@ class Client(object): #changed from StrictRedis
         return self.redis.execute_command(self.DELETERULE_CMD, source_key, dest_key)
 
     def __range_params(self, key, from_time, to_time, count, aggregation_type, bucket_size_msec,
-                       filter_by_ts, filter_by_min_value, filter_by_max_value):
+                       filter_by_ts, filter_by_min_value, filter_by_max_value, align):
         """
         Internal method to create TS.RANGE and TS.REVRANGE arguments
         """
@@ -404,14 +409,15 @@ class Client(object): #changed from StrictRedis
         self.appendFilerByTs(params, filter_by_ts)
         self.appendFilerByValue(params, filter_by_min_value, filter_by_max_value)
         self.appendCount(params, count)
+        self.appendAlign(params, align)
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
 
         return params
 
-    def range(self, key, from_time, to_time, count=None,
-                aggregation_type=None, bucket_size_msec=0,
-                filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None):
+    def range(self, key, from_time, to_time, count=None, aggregation_type=None,
+              bucket_size_msec=0, filter_by_ts=None, filter_by_min_value=None,
+              filter_by_max_value=None, align=None):
         """
         Query a range in forward direction for a specific time-serie.
 
@@ -426,14 +432,15 @@ class Client(object): #changed from StrictRedis
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
             filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
             filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
+            align: Timestamp for alignment control for aggregation.
         """
         params = self.__range_params(key, from_time, to_time, count, aggregation_type, bucket_size_msec,
-                                     filter_by_ts, filter_by_min_value, filter_by_max_value)
+                                     filter_by_ts, filter_by_min_value, filter_by_max_value, align)
         return self.redis.execute_command(self.RANGE_CMD, *params)
 
-    def revrange(self, key, from_time, to_time, count=None,
-                    aggregation_type=None, bucket_size_msec=0,
-                    filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None):
+    def revrange(self, key, from_time, to_time, count=None, aggregation_type=None,
+                 bucket_size_msec=0, filter_by_ts=None, filter_by_min_value=None,
+                 filter_by_max_value=None, align=None):
         """
         Query a range in reverse direction for a specific time-serie.
         Note: This command is only available since RedisTimeSeries >= v1.4
@@ -449,14 +456,15 @@ class Client(object): #changed from StrictRedis
             filter_by_ts: List of timestamps to filter the result by specific timestamps.
             filter_by_min_value: Filter result by minimum value (must mention also filter_by_max_value).
             filter_by_max_value: Filter result by maximum value (must mention also filter_by_min_value).
+            align: Timestamp for alignment control for aggregation.
         """
         params = self.__range_params(key, from_time, to_time, count, aggregation_type, bucket_size_msec,
-                                     filter_by_ts, filter_by_min_value, filter_by_max_value)
+                                     filter_by_ts, filter_by_min_value, filter_by_max_value, align)
         return self.redis.execute_command(self.REVRANGE_CMD, *params)
 
     def __mrange_params(self, aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
                         with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value, groupby,
-                        reduce, select_labels):
+                        reduce, select_labels, align):
         """
         Internal method to create TS.MRANGE and TS.MREVRANGE arguments
         """
@@ -464,6 +472,7 @@ class Client(object): #changed from StrictRedis
         self.appendFilerByTs(params, filter_by_ts)
         self.appendFilerByValue(params, filter_by_min_value, filter_by_max_value)
         self.appendCount(params, count)
+        self.appendAlign(params, align)
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
         self.appendWithLabels(params, with_labels, select_labels)
@@ -474,7 +483,7 @@ class Client(object): #changed from StrictRedis
 
     def mrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
                with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None,
-               groupby=None, reduce=None, select_labels=None):
+               groupby=None, reduce=None, select_labels=None, align=None):
         """
         Query a range across multiple time-series by filters in forward direction.
 
@@ -494,16 +503,17 @@ class Client(object): #changed from StrictRedis
             groupby: Grouping by fields the results (must mention also reduce).
             reduce: Applying reducer functions on each group. Can be one of ['sum', 'min', 'max'].
             select_labels: Include in the reply only a subset of the key-value pair labels of a series.
+            align: Timestamp for alignment control for aggregation.
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
                                       with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value,
-                                      groupby, reduce, select_labels)
+                                      groupby, reduce, select_labels, align)
         
         return self.redis.execute_command(self.MRANGE_CMD, *params)
 
     def mrevrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
                   with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None,
-                  groupby=None, reduce=None, select_labels=None):
+                  groupby=None, reduce=None, select_labels=None, align=None):
         """
         Query a range across multiple time-series by filters in reverse direction.
 
@@ -523,10 +533,11 @@ class Client(object): #changed from StrictRedis
             groupby: Grouping by fields the results (must mention also reduce).
             reduce: Applying reducer functions on each group. Can be one of ['sum', 'min', 'max'].
             select_labels: Include in the reply only a subset of the key-value pair labels of a series.
+            align: Timestamp for alignment control for aggregation.
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
                                       with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value,
-                                      groupby, reduce, select_labels)
+                                      groupby, reduce, select_labels, align)
 
         return self.redis.execute_command(self.MREVRANGE_CMD, *params)
 
