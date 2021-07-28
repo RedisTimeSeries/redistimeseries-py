@@ -464,7 +464,7 @@ class Client(object): #changed from StrictRedis
 
     def __mrange_params(self, aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
                         with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value, groupby,
-                        reduce, select_labels):
+                        reduce, select_labels, align):
         """
         Internal method to create TS.MRANGE and TS.MREVRANGE arguments
         """
@@ -472,6 +472,7 @@ class Client(object): #changed from StrictRedis
         self.appendFilerByTs(params, filter_by_ts)
         self.appendFilerByValue(params, filter_by_min_value, filter_by_max_value)
         self.appendCount(params, count)
+        self.appendAlign(params, align)
         if aggregation_type is not None:
             self.appendAggregation(params, aggregation_type, bucket_size_msec)
         self.appendWithLabels(params, with_labels, select_labels)
@@ -482,7 +483,7 @@ class Client(object): #changed from StrictRedis
 
     def mrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
                with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None,
-               groupby=None, reduce=None, select_labels=None):
+               groupby=None, reduce=None, select_labels=None, align=None):
         """
         Query a range across multiple time-series by filters in forward direction.
 
@@ -502,16 +503,17 @@ class Client(object): #changed from StrictRedis
             groupby: Grouping by fields the results (must mention also reduce).
             reduce: Applying reducer functions on each group. Can be one of ['sum', 'min', 'max'].
             select_labels: Include in the reply only a subset of the key-value pair labels of a series.
+            align: Timestamp for alignment control for aggregation.
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
                                       with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value,
-                                      groupby, reduce, select_labels)
+                                      groupby, reduce, select_labels, align)
         
         return self.redis.execute_command(self.MRANGE_CMD, *params)
 
     def mrevrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
                   with_labels=False, filter_by_ts=None, filter_by_min_value=None, filter_by_max_value=None,
-                  groupby=None, reduce=None, select_labels=None):
+                  groupby=None, reduce=None, select_labels=None, align=None):
         """
         Query a range across multiple time-series by filters in reverse direction.
 
@@ -531,10 +533,11 @@ class Client(object): #changed from StrictRedis
             groupby: Grouping by fields the results (must mention also reduce).
             reduce: Applying reducer functions on each group. Can be one of ['sum', 'min', 'max'].
             select_labels: Include in the reply only a subset of the key-value pair labels of a series.
+            align: Timestamp for alignment control for aggregation.
         """
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
                                       with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value,
-                                      groupby, reduce, select_labels)
+                                      groupby, reduce, select_labels, align)
 
         return self.redis.execute_command(self.MREVRANGE_CMD, *params)
 

@@ -273,6 +273,11 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(2, len(res))
         self.assertEqual([(0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)], res[0]['team=ny'][1])
         self.assertEqual([(0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)], res[1]['team=sf'][1])
+        # test align
+        res = rts.mrange(0, 10, filters=['team=ny'], aggregation_type='count', bucket_size_msec=10, align='-')
+        self.assertEqual([(0, 10.0), (10, 1.0)], res[0]['1'][1])
+        res = rts.mrange(0, 10, filters=['team=ny'], aggregation_type='count', bucket_size_msec=10, align=5)
+        self.assertEqual([(-5, 5.0), (5, 6.0)], res[0]['1'][1])
 
     def testMultiReverseRange(self):
         '''Test TS.MREVRANGE calls which returns range by filter'''
@@ -321,6 +326,11 @@ class RedisTimeSeriesTest(TestCase):
         self.assertEqual(2, len(res))
         self.assertEqual([(3, 3.0), (2, 2.0),  (1, 1.0), (0, 0.0)], res[0]['team=ny'][1])
         self.assertEqual([(3, 3.0), (2, 2.0),  (1, 1.0), (0, 0.0)], res[1]['team=sf'][1])
+        # test align
+        res = rts.mrevrange(0, 10, filters=['team=ny'], aggregation_type='count', bucket_size_msec=10, align='-')
+        self.assertEqual([(10, 1.0), (0, 10.0)], res[0]['1'][1])
+        res = rts.mrevrange(0, 10, filters=['team=ny'], aggregation_type='count', bucket_size_msec=10, align=1)
+        self.assertEqual([(1, 10.0), (-9, 1.0)], res[0]['1'][1])
 
     def testGet(self):
         '''Test TS.GET calls'''
