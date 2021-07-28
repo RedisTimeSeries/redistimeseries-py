@@ -202,10 +202,13 @@ class RedisTimeSeriesTest(TestCase):
         for i in range(100):
             rts.add(1, i+200, i % 7)
         self.assertEqual(200, len(rts.range(1, 0, 500)))
-        #last sample isn't returned
+        # last sample isn't returned
         self.assertEqual(20, len(rts.range(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
         self.assertEqual(10, len(rts.range(1, 0, 500, count=10)))
         self.assertEqual(2, len(rts.range(1, 0, 500, filter_by_ts=[i for i in range(10, 20)], filter_by_min_value=1, filter_by_max_value=2)))
+        self.assertEqual([(0, 10.0), (10, 1.0)], rts.range(1, 0, 10, aggregation_type='count', bucket_size_msec=10, align='+'))
+        self.assertEqual([(-5, 5.0), (5, 6.0)], rts.range(1, 0, 10, aggregation_type='count', bucket_size_msec=10, align=5))
+
 
     def testRevRange(self):
         '''Test TS.REVRANGE calls which returns reverse range by key'''
@@ -219,10 +222,12 @@ class RedisTimeSeriesTest(TestCase):
         for i in range(100):
             rts.add(1, i+200, i % 7)
         self.assertEqual(200, len(rts.range(1, 0, 500)))
-        #first sample isn't returned
+        # first sample isn't returned
         self.assertEqual(20, len(rts.revrange(1, 0, 500, aggregation_type='avg', bucket_size_msec=10)))
         self.assertEqual(10, len(rts.revrange(1, 0, 500, count=10)))
         self.assertEqual(2, len(rts.revrange(1, 0, 500, filter_by_ts=[i for i in range(10, 20)], filter_by_min_value=1, filter_by_max_value=2)))
+        self.assertEqual([(10, 1.0), (0, 10.0)], rts.revrange(1, 0, 10, aggregation_type='count', bucket_size_msec=10, align='+'))
+        self.assertEqual([(1, 10.0), (-9, 1.0)], rts.revrange(1, 0, 10, aggregation_type='count', bucket_size_msec=10, align=1))
 
     def testMultiRange(self):
         '''Test TS.MRANGE calls which returns range by filter'''
