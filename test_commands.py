@@ -168,7 +168,7 @@ class RedisTimeSeriesTest(TestCase):
 
         for i in range(100):
             rts.add(1, i, i % 7)
-        self.assertTrue(rts.delrange(1, 0, 21))
+        self.assertEqual(22, rts.delrange(1, 0, 21))
         self.assertEqual([], rts.range(1, 0, 21))
         self.assertEqual([(22, 1.0)], rts.range(1, 22, 22))
 
