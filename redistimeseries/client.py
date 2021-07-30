@@ -111,7 +111,6 @@ class Client(object): #changed from StrictRedis
         MODULE_CALLBACKS = {
             self.CREATE_CMD : bool_ok,
             self.ALTER_CMD : bool_ok,
-            self.DEL_CMD : bool_ok,
             self.CREATERULE_CMD : bool_ok,
             self.DELETERULE_CMD : bool_ok,
             self.RANGE_CMD : parse_range,
@@ -375,6 +374,7 @@ class Client(object): #changed from StrictRedis
         """
         Delete data points for a given timeseries and interval range in the form of start and end delete timestamps.
         The given timestamp interval is closed (inclusive), meaning start and end data points will also be deleted.
+        Return the count for deleted items.
 
         Args:
             key: time-series key.
