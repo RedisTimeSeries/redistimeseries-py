@@ -59,14 +59,13 @@ def parse_get(response):
     return (int(response[0]), float(response[1]))
 
 def parse_m_get(response):
-    res = []
+    res = dict()
     for item in response:
         if item[2] == []:
-            res.append({ nativestr(item[0]) : [list_to_dict(item[1]), None, None]})
+            res[nativestr(item[0])] = (list_to_dict(item[1]), None, None)
         else:
-            res.append({ nativestr(item[0]) : [list_to_dict(item[1]),
-                                int(item[2][0]), float(item[2][1])]})
-
+            res[nativestr(item[0])] = (list_to_dict(item[1]),
+                                       int(item[2][0]), float(item[2][1]))
     return res
 
 def parseToList(response):
