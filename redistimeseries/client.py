@@ -3,6 +3,7 @@ from redis.client import Pipeline
 from redis.client import bool_ok
 from redis._compat import nativestr
 
+
 class TSInfo(object):
     rules = []
     labels = []
@@ -31,7 +32,7 @@ class TSInfo(object):
         self.first_time_stamp = response['firstTimestamp']
         if 'maxSamplesPerChunk' in response:
             self.max_samples_per_chunk = response['maxSamplesPerChunk']
-            self.chunk_size = self.max_samples_per_chunk * 16 # backward compatible changes
+            self.chunk_size = self.max_samples_per_chunk * 16  # backward compatible changes
         if 'chunkSize' in response:
             self.chunk_size = response['chunkSize']
         if 'duplicatePolicy' in response:
@@ -39,35 +40,41 @@ class TSInfo(object):
             if type(self.duplicate_policy) == bytes:
                 self.duplicate_policy = self.duplicate_policy.decode()
 
+
 def list_to_dict(aList):
-    return {nativestr(aList[i][0]):nativestr(aList[i][1])
-                for i in range(len(aList))}
+    return {nativestr(aList[i][0]): nativestr(aList[i][1])
+            for i in range(len(aList))}
+
 
 def parse_range(response):
     return [tuple((l[0], float(l[1]))) for l in response]
 
+
 def parse_m_range(response):
     res = []
     for item in response:
-        res.append({ nativestr(item[0]) : [list_to_dict(item[1]),
-                                parse_range(item[2])]})
+        res.append({nativestr(item[0]): [list_to_dict(item[1]),
+                                         parse_range(item[2])]})
     return res
 
+
 def parse_get(response):
-    if response == []:
+    if not response:
         return None
-    return (int(response[0]), float(response[1]))
+    return int(response[0]), float(response[1])
+
 
 def parse_m_get(response):
     res = []
     for item in response:
         if item[2] == []:
-            res.append({ nativestr(item[0]) : [list_to_dict(item[1]), None, None]})
+            res.append({nativestr(item[0]): [list_to_dict(item[1]), None, None]})
         else:
-            res.append({ nativestr(item[0]) : [list_to_dict(item[1]),
-                                int(item[2][0]), float(item[2][1])]})
+            res.append({nativestr(item[0]): [list_to_dict(item[1]),
+                                             int(item[2][0]), float(item[2][1])]})
 
     return res
+
 
 def parseToList(response):
     res = []
@@ -75,7 +82,8 @@ def parseToList(response):
         res.append(nativestr(item))
     return res
 
-class Client(object): #changed from StrictRedis
+
+class Client(object):  # changed from StrictRedis
     """
     This class subclasses redis-py's `Redis` and implements
     RedisTimeSeries's commands (prefixed with "ts").
@@ -109,18 +117,18 @@ class Client(object): #changed from StrictRedis
 
         # Set the module commands' callbacks
         MODULE_CALLBACKS = {
-            self.CREATE_CMD : bool_ok,
-            self.ALTER_CMD : bool_ok,
-            self.CREATERULE_CMD : bool_ok,
-            self.DELETERULE_CMD : bool_ok,
-            self.RANGE_CMD : parse_range,
+            self.CREATE_CMD: bool_ok,
+            self.ALTER_CMD: bool_ok,
+            self.CREATERULE_CMD: bool_ok,
+            self.DELETERULE_CMD: bool_ok,
+            self.RANGE_CMD: parse_range,
             self.REVRANGE_CMD: parse_range,
-            self.MRANGE_CMD : parse_m_range,
+            self.MRANGE_CMD: parse_m_range,
             self.MREVRANGE_CMD: parse_m_range,
-            self.GET_CMD : parse_get,
-            self.MGET_CMD : parse_m_get,
-            self.INFO_CMD : TSInfo,
-            self.QUERYINDEX_CMD : parseToList,
+            self.GET_CMD: parse_get,
+            self.MGET_CMD: parse_m_get,
+            self.INFO_CMD: TSInfo,
+            self.QUERYINDEX_CMD: parseToList,
         }
         for k in MODULE_CALLBACKS:
             self.redis.set_response_callback(k, MODULE_CALLBACKS[k])
@@ -155,7 +163,7 @@ class Client(object): #changed from StrictRedis
         if labels:
             params.append('LABELS')
             for k, v in labels.items():
-                params.extend([k,v])
+                params.extend([k, v])
 
     @staticmethod
     def appendCount(params, count):
@@ -237,7 +245,7 @@ class Client(object): #changed from StrictRedis
         self.appendLabels(params, labels)
 
         return self.redis.execute_command(self.CREATE_CMD, *params)
-        
+
     def alter(self, key, **kwargs):
         """
         Update the retention, labels of an existing key. The parameters
@@ -367,7 +375,7 @@ class Client(object): #changed from StrictRedis
         self.appendUncompressed(params, uncompressed)
         self.appendChunkSize(params, chunk_size)
         self.appendLabels(params, labels)
-        
+
         return self.redis.execute_command(self.DECRBY_CMD, *params)
 
     def delrange(self, key, from_time, to_time):
@@ -383,8 +391,8 @@ class Client(object): #changed from StrictRedis
         """
         return self.redis.execute_command(self.DEL_CMD, key, from_time, to_time)
 
-    def createrule(self, source_key, dest_key, 
-                     aggregation_type, bucket_size_msec):
+    def createrule(self, source_key, dest_key,
+                   aggregation_type, bucket_size_msec):
         """
         Creates a compaction rule from values added to ``source_key``
         into ``dest_key``. Aggregating for ``bucket_size_msec`` where an
@@ -508,7 +516,7 @@ class Client(object): #changed from StrictRedis
         params = self.__mrange_params(aggregation_type, bucket_size_msec, count, filters, from_time, to_time,
                                       with_labels, filter_by_ts, filter_by_min_value, filter_by_max_value,
                                       groupby, reduce, select_labels, align)
-        
+
         return self.redis.execute_command(self.MRANGE_CMD, *params)
 
     def mrevrange(self, from_time, to_time, filters, count=None, aggregation_type=None, bucket_size_msec=0,
@@ -552,7 +560,7 @@ class Client(object): #changed from StrictRedis
         params.extend(['FILTER'])
         params += filters
         return self.redis.execute_command(self.MGET_CMD, *params)
-   
+
     def info(self, key):
         """Gets information of ``key``"""
         return self.redis.execute_command(self.INFO_CMD, key)
@@ -577,6 +585,7 @@ class Client(object): #changed from StrictRedis
             shard_hint=shard_hint)
         p.redis = p
         return p
+
 
 class Pipeline(Pipeline, Client):
     "Pipeline for Redis TimeSeries Client"
