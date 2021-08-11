@@ -96,10 +96,8 @@ class RedisTimeSeriesTest(TestCase):
 
         # Test for duplicate policy BLOCK
         self.assertEqual(1, rts.add("time-serie-add-ooo-block", 1, 5.0))
-        try:
+        with self.assertRaises(Exception):
             rts.add("time-serie-add-ooo-block", 1, 5.0, duplicate_policy='block')
-        except Exception as e:
-            self.assertEqual("TSDB: Error at upsert, update is not supported in BLOCK mode", e.__str__())
 
         # Test for duplicate policy LAST
         self.assertEqual(1, rts.add("time-serie-add-ooo-last", 1, 5.0))
