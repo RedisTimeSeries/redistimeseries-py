@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "redistimeseries"
-version = "1.4.3"
+version = "1.4.4"
 description = "RedisTimeSeries Python Client"
 authors = ["RedisLabs <oss@redislabs.com>"]
 license = "BSD-3-Clause"
@@ -23,7 +23,7 @@ keywords = ["Redis TimeSeries Extension"]
 
 [tool.poetry.dependencies]
 python = "^3.6"
-redis = "^3.5.3"
+redis = "3.5.3"
 importlib-metadata = "^4.0.1"
 
 
