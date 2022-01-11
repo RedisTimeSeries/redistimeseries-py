@@ -179,8 +179,8 @@ class Client(object): #changed from StrictRedis
                 params.extend(['DUPLICATE_POLICY', duplicate_policy])
 
     def _execute(self,cmd:str,response):
-        if response is not None and cmd in self.CREATE_CMD:
-            return self.CREATE_CMD[cmd](response)
+        if response is not None and cmd in self.MODULE_CALLBACKS:
+            return self.MODULE_CALLBACKS[cmd](response)
         return response
 
     async def create(self, key, **kwargs):
