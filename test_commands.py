@@ -207,7 +207,7 @@ class RedisTimeSeriesTest(TestCase):
                                           filter_by_max_value=2)))
         self.assertEqual([(0, 10.0), (10, 1.0)],
                          rts.range(1, 0, 10, aggregation_type='count', bucket_size_msec=10, align='+'))
-        self.assertEqual([(-5, 5.0), (5, 6.0)],
+        self.assertEqual([(0, 5.0), (5, 6.0)],
                          rts.range(1, 0, 10, aggregation_type='count', bucket_size_msec=10, align=5))
 
     def testRevRange(self):
@@ -229,7 +229,7 @@ class RedisTimeSeriesTest(TestCase):
                                              filter_by_max_value=2)))
         self.assertEqual([(10, 1.0), (0, 10.0)],
                          rts.revrange(1, 0, 10, aggregation_type='count', bucket_size_msec=10, align='+'))
-        self.assertEqual([(1, 10.0), (-9, 1.0)],
+        self.assertEqual([(1, 10.0), (0, 1.0)],
                          rts.revrange(1, 0, 10, aggregation_type='count', bucket_size_msec=10, align=1))
 
     def testMultiRange(self):
@@ -280,7 +280,7 @@ class RedisTimeSeriesTest(TestCase):
         res = rts.mrange(0, 10, filters=['team=ny'], aggregation_type='count', bucket_size_msec=10, align='-')
         self.assertEqual([(0, 10.0), (10, 1.0)], res[0]['1'][1])
         res = rts.mrange(0, 10, filters=['team=ny'], aggregation_type='count', bucket_size_msec=10, align=5)
-        self.assertEqual([(-5, 5.0), (5, 6.0)], res[0]['1'][1])
+        self.assertEqual([(0, 5.0), (5, 6.0)], res[0]['1'][1])
 
     def testMultiReverseRange(self):
         '''Test TS.MREVRANGE calls which returns range by filter'''
@@ -333,7 +333,7 @@ class RedisTimeSeriesTest(TestCase):
         res = rts.mrevrange(0, 10, filters=['team=ny'], aggregation_type='count', bucket_size_msec=10, align='-')
         self.assertEqual([(10, 1.0), (0, 10.0)], res[0]['1'][1])
         res = rts.mrevrange(0, 10, filters=['team=ny'], aggregation_type='count', bucket_size_msec=10, align=1)
-        self.assertEqual([(1, 10.0), (-9, 1.0)], res[0]['1'][1])
+        self.assertEqual([(1, 10.0), (0, 1.0)], res[0]['1'][1])
 
     def testGet(self):
         '''Test TS.GET calls'''
