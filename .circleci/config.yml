@@ -50,7 +50,7 @@ commands:
       - run:
           name: install tox dependencies
           command: |
-            pip install --user --quiet --upgrade pip virtualenv
+            pip install --user --quiet --upgrade pip virtualenv==20.7.2
             pip install --user --quiet -r .circleci/circle_requirements.txt
 
       - run:
