@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "redistimeseries"
-version = "1.4.4"
+version = "1.4.5"
 description = "RedisTimeSeries Python Client"
 authors = ["RedisLabs <oss@redislabs.com>"]
 license = "BSD-3-Clause"
@@ -17,7 +17,7 @@ classifiers = [
     'Programming Language :: Python :: 3.10',
     'License :: OSI Approved :: BSD License',
     'Operating System :: OS Independent',
-    'Development Status :: 5 - Production/Stable'
+    'Development Status :: 7 - Inactive'
 ]
 keywords = ["Redis TimeSeries Extension"]
 
