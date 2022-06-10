@@ -7,7 +7,7 @@
 [![Known Vulnerabilities](https://snyk.io/test/github/RedisTimeSeries/redistimeseries-py/badge.svg?targetFile=pyproject.toml)](https://snyk.io/test/github/RedisTimeSeries/redistimeseries-py?targetFile=pyproject.toml)
 
 # redistimeseries-py
-[![Forum](https://img.shields.io/badge/Forum-RedisTimeSeries-blue)](https://forum.redislabs.com/c/modules/redistimeseries)
+[![Forum](https://img.shields.io/badge/Forum-RedisTimeSeries-blue)](https://forum..com/c/modules/redistimeseries)
 [![Discord](https://img.shields.io/discord/697882427875393627?style=flat-square)](https://discord.gg/KExRgMb)
 
 ## Deprecation notice
@@ -73,7 +73,7 @@ rts.info('sumRule').__dict__
 
 Since [RedisTimeSeries 1.4](https://github.com/RedisTimeSeries/RedisTimeSeries/releases/tag/v1.4.5) we've added the ability to back-fill time series, with different duplicate policies.
 
-The default behavior is to block updates to the same timestamp, and you can control it via the `duplicate_policy` argument. You can check in detail the [duplicate policy documentation](https://oss.redislabs.com/redistimeseries/configuration/#duplicate_policy).
+The default behavior is to block updates to the same timestamp, and you can control it via the `duplicate_policy` argument. You can check in detail the [duplicate policy documentation](https://oss..com/redistimeseries/configuration/#duplicate_policy).
 
 Bellow you can find an example of the `LAST` duplicate policy, in which we override duplicate timestamps with the latest value:
 

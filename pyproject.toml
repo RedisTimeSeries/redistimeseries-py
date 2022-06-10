@@ -2,7 +2,7 @@
 name = "redistimeseries"
 version = "1.4.4"
 description = "RedisTimeSeries Python Client"
-authors = ["RedisLabs <oss@redislabs.com>"]
+authors = ["Redis <oss@.com>"]
 license = "BSD-3-Clause"
 readme = "README.md"
 
